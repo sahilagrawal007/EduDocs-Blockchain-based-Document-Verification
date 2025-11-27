@@ -1,0 +1,122 @@
+# ============================================
+# Node and General Project Ignores
+# ============================================
+
+node_modules/
+package-lock.json
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+dist/
+build/
+.tmp/
+temp/
+
+# ============================================
+# Hardhat and Solidity Build Artifacts
+# ============================================
+
+artifacts/
+cache/
+coverage/
+coverage.json
+typechain/
+typechain-types/
+
+# Ignore Hardhat compiler downloads (optional)
+.solidity_cache/
+
+# ============================================
+# Environment Variables
+# ============================================
+
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+
+# ============================================
+# Issuer Private Keys (Sensitive)
+# ============================================
+
+keys/
+# Keep folder name but ignore contents
+keys/*
+
+# Allow empty placeholder file if needed
+!keys/.gitkeep
+
+# ============================================
+# React / Vite (Verifier UI)
+# ============================================
+
+verifier-ui/node_modules/
+verifier-ui/dist/
+verifier-ui/.vite/
+verifier-ui/.DS_Store
+
+# ============================================
+# OS Specific Files
+# ============================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+
+# ============================================
+# Logs
+# ============================================
+
+logs/
+*.log
+*.log.*
+npm-debug.log*
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# ============================================
+# IDE / Editor Files
+# ============================================
+
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+
+# ============================================
+# Lockfiles (optional)
+# Uncomment if you want reproducible builds
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# ============================================
+# Backup files
+# ============================================
+
+*.bak
+*.tmp
+*.temp
+
+# ============================================
+# Misc
+# ============================================
+
+*.zip
+*.tar
+*.tar.gz
+*.tgz
