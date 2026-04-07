@@ -5,7 +5,8 @@
   "scripts": {
     "compile": "npx hardhat compile",
     "node": "npx hardhat node",
-    "deploy-local": "npx hardhat run --network localhost scripts/deploy.js"
+    "deploy-local": "npx hardhat run --network localhost scripts/deploy.js",
+    "start-all": "node dev-start.js"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.2.3",
