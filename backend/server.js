@@ -8,6 +8,8 @@ const nodemailer = require('nodemailer');
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
+const cloudinary = require('cloudinary').v2;
+const streamifier = require('streamifier');
 const upload = multer(); // For parsing multipart/form-data
 
 const app = express();
@@ -24,6 +26,13 @@ if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+// Cloudinary config
+cloudinary.config({ 
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME, 
+  api_key: process.env.CLOUDINARY_API_KEY, 
+  api_secret: process.env.CLOUDINARY_API_SECRET 
+});
 const RPC_URL = process.env.RPC_URL || 'http://127.0.0.1:8545';
 const HARDHAT_FUNDER_KEY = process.env.HARDHAT_FUNDER_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'; // Account 0
 
@@ -341,11 +350,29 @@ app.post('/api/issue', upload.single('document'), async (req, res) => {
             console.error('Failed to send document email:', mailErr);
         }
 
-        // Update local DB
-        const fileExt = path.extname(documentFile.originalname || '.pdf');
-        const savedFileName = credentialId.slice(0,10) + '_' + Date.now() + fileExt;
-        const uploadPath = path.join(__dirname, 'uploads', savedFileName);
-        fs.writeFileSync(uploadPath, documentFile.buffer);
+        // Upload to Cloudinary
+        const uploadFromBuffer = (req) => {
+            return new Promise((resolve, reject) => {
+                let cld_upload_stream = cloudinary.uploader.upload_stream(
+                    {
+                        folder: "edudocs",
+                        resource_type: "image", // PDFs are delivered via the image pipeline in Cloudinary!
+                        public_id: credentialId.slice(0,10) + '_' + Date.now()
+                    },
+                    (error, result) => {
+                        if (result) {
+                            resolve(result);
+                        } else {
+                            reject(error);
+                        }
+                    }
+                );
+                streamifier.createReadStream(req.file.buffer).pipe(cld_upload_stream);
+            });
+        };
+
+        const cloudinaryResult = await uploadFromBuffer(req);
+        const documentUrl = cloudinaryResult.secure_url;
 
         const docRecord = {
             email: credentialText, // recipient
@@ -353,7 +380,8 @@ app.post('/api/issue', upload.single('document'), async (req, res) => {
             credentialId,
             txHash: tx.hash,
             originalName: documentFile.originalname || 'document.pdf',
-            savedName: savedFileName,
+            savedName: documentFile.originalname || 'document.pdf',
+            documentUrl: documentUrl,
             docHash: bytes32Hash,
             issuedAt: Date.now()
         };
@@ -610,4 +638,4 @@ app.listen(PORT, () => {
     console.log(`Backend server listening on port ${PORT}`);
 });
 
-// Triggering restart
+// Triggering restart for Cloudinary!

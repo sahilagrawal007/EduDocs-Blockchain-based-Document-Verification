@@ -175,6 +175,7 @@ const IssuerDashboard = ({
                         <th>Document Type</th>
                         <th>Credential ID</th>
                         <th>Issuance Date</th>
+                        <th style={{ textAlign: 'center' }}>Document</th>
                         <th style={{ textAlign: 'center' }}>Status</th>
                         <th style={{ textAlign: 'center' }}>Action</th>
                     </tr>
@@ -203,6 +204,16 @@ const IssuerDashboard = ({
                                     </span>
                                 </td>
                                 <td>{new Date(doc.issuedAt).toLocaleDateString()}</td>
+                                <td style={{ textAlign: 'center' }}>
+                                    {doc.documentUrl ? (
+                                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                                            <a href={doc.documentUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#6366f1', fontSize: '13px', textDecoration: 'none', fontWeight: 'bold' }}>Preview</a>
+                                            <a href={doc.documentUrl.replace('/upload/', '/upload/fl_attachment/')} target="_blank" rel="noopener noreferrer" style={{ color: '#10b981', fontSize: '13px', textDecoration: 'none', fontWeight: 'bold' }}>Download</a>
+                                        </div>
+                                    ) : (
+                                        <span style={{ color: '#94a3b8', fontSize: '12px' }}>Local Storage</span>
+                                    )}
+                                </td>
                                 <td style={{ textAlign: 'center' }}>
                                     {doc.revoked ? (
                                         <span style={{ color: '#ef4444', fontWeight: 'bold', fontSize: '12px' }}>Revoked</span>
