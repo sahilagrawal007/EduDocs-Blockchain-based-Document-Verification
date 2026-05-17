@@ -9,6 +9,7 @@ import AdminDashboard from './components/AdminDashboard';
 import IssuerDashboard from './components/IssuerDashboard';
 import UserDashboard from './components/UserDashboard';
 import Profile from './components/Profile';
+import SuperAdminDashboard from './components/SuperAdminDashboard';
 
 function App() {
   const navigate = useNavigate();
@@ -77,7 +78,10 @@ function App() {
          localStorage.setItem('hardhatKey', hardhatKey);
       }
       
-      if (data.role === 'master_admin') {
+      if (data.role === 'super_admin') {
+          navigate('/super-admin');
+      }
+      else if (data.role === 'master_admin') {
           navigate('/admin');
           fetchUsers(data.token);
       }
@@ -286,7 +290,7 @@ function App() {
   return (
     <div className="app-root">
       <Routes>
-        <Route path="/" element={<Navigate to={token ? `/${role === 'master_admin' ? 'admin' : role === 'issuer' ? 'issuer' : 'verifier'}` : "/login"} />} />
+        <Route path="/" element={<Navigate to={token ? `/${role === 'super_admin' ? 'super-admin' : role === 'master_admin' ? 'admin' : role === 'issuer' ? 'issuer' : 'verifier'}` : "/login"} />} />
         
         <Route path="/login" element={
           <Login 
@@ -296,6 +300,12 @@ function App() {
             hardhatKey={hardhatKey} setHardhatKey={setHardhatKey}
             handleLogin={handleLogin}
           />
+        } />
+
+        <Route path="/super-admin" element={
+          role === 'super_admin' ? (
+            <SuperAdminDashboard token={token} handleLogout={handleLogout} />
+          ) : <Navigate to="/login" />
         } />
 
         <Route path="/admin" element={

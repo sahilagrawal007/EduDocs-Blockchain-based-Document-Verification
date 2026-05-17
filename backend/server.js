@@ -123,13 +123,21 @@ app.post('/api/auth/create_user', async (req, res) => {
         }
     }
 
+    const { data: adminProfile } = await supabase.from('profiles').select('organization_id').eq('id', adminUser.id).single();
+    const orgId = adminProfile ? adminProfile.organization_id : null;
+    
+    if (!orgId) {
+        throw new Error('Master Admin must belong to an organization to create users.');
+    }
+
     // Save profile config
     const { error: profileError } = await supabase.from('profiles').insert([
       { 
         id: newUser.user.id, 
         role: role, 
         blockchain_address: address,
-        first_login_complete: false
+        first_login_complete: false,
+        organization_id: orgId
       }
     ]);
     if (profileError) throw new Error(profileError.message);
@@ -537,9 +545,9 @@ app.get('/api/users', async (req, res) => {
         const { data: { user: adminUser }, error: verifyError } = await supabase.auth.getUser(masterAdminToken);
         if (verifyError || !adminUser) throw new Error('Invalid token');
 
-        // Verify role is master_admin
-        const { data: adminProfile } = await supabase.from('profiles').select('role').eq('id', adminUser.id).single();
-        if (!adminProfile || adminProfile.role !== 'master_admin') throw new Error('Forbidden');
+        // Verify role is master_admin or super_admin
+        const { data: adminProfile } = await supabase.from('profiles').select('role, organization_id').eq('id', adminUser.id).single();
+        if (!adminProfile || (adminProfile.role !== 'master_admin' && adminProfile.role !== 'super_admin')) throw new Error('Forbidden');
 
         // Get all users from Auth
         const { data: authUsers, error: usersError } = await supabase.auth.admin.listUsers();
@@ -555,8 +563,12 @@ app.get('/api/users', async (req, res) => {
                 id: u.id,
                 email: u.email,
                 role: prof ? prof.role : 'unknown',
-                first_login: prof ? prof.first_login_complete : false
+                first_login: prof ? prof.first_login_complete : false,
+                organization_id: prof ? prof.organization_id : null
             };
+        }).filter(u => {
+            if (adminProfile.role === 'super_admin') return true;
+            return u.organization_id === adminProfile.organization_id;
         });
 
         res.json({ users: usersList });
@@ -575,8 +587,16 @@ app.delete('/api/users/:id', async (req, res) => {
         const { data: { user: adminUser }, error: verifyError } = await supabase.auth.getUser(masterAdminToken);
         if (verifyError || !adminUser) throw new Error('Invalid token');
 
-        const { data: adminProfile } = await supabase.from('profiles').select('role').eq('id', adminUser.id).single();
-        if (!adminProfile || adminProfile.role !== 'master_admin') throw new Error('Forbidden');
+        const { data: adminProfile } = await supabase.from('profiles').select('role, organization_id').eq('id', adminUser.id).single();
+        if (!adminProfile || (adminProfile.role !== 'master_admin' && adminProfile.role !== 'super_admin')) throw new Error('Forbidden');
+
+        // Tenant Isolation: If not super admin, check if user belongs to the same org
+        if (adminProfile.role !== 'super_admin') {
+            const { data: targetProfile } = await supabase.from('profiles').select('organization_id').eq('id', userId).single();
+            if (!targetProfile || targetProfile.organization_id !== adminProfile.organization_id) {
+                throw new Error('Forbidden: Cannot modify a user from a different organization.');
+            }
+        }
 
         // Delete profile and then user
         await supabase.from('profiles').delete().eq('id', userId);
@@ -599,8 +619,16 @@ app.put('/api/users/:id/password', async (req, res) => {
         const { data: { user: adminUser }, error: verifyError } = await supabase.auth.getUser(masterAdminToken);
         if (verifyError || !adminUser) throw new Error('Invalid token');
 
-        const { data: adminProfile } = await supabase.from('profiles').select('role').eq('id', adminUser.id).single();
-        if (!adminProfile || adminProfile.role !== 'master_admin') throw new Error('Forbidden');
+        const { data: adminProfile } = await supabase.from('profiles').select('role, organization_id').eq('id', adminUser.id).single();
+        if (!adminProfile || (adminProfile.role !== 'master_admin' && adminProfile.role !== 'super_admin')) throw new Error('Forbidden');
+
+        // Tenant Isolation: If not super admin, check if user belongs to the same org
+        if (adminProfile.role !== 'super_admin') {
+            const { data: targetProfile } = await supabase.from('profiles').select('organization_id').eq('id', userId).single();
+            if (!targetProfile || targetProfile.organization_id !== adminProfile.organization_id) {
+                throw new Error('Forbidden: Cannot modify a user from a different organization.');
+            }
+        }
 
         const { error: updateError } = await supabase.auth.admin.updateUserById(userId, { password: newPassword });
         if (updateError) throw new Error(updateError.message);
@@ -625,6 +653,196 @@ app.put('/api/users/:id/password', async (req, res) => {
         }
 
         res.json({ message: 'Password updated successfully' });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// --- SUPER ADMIN ENDPOINTS ---
+
+app.post('/api/organizations', async (req, res) => {
+    const { token, name } = req.body;
+    if (!token || !name) return res.status(400).json({ error: 'Missing parameters' });
+    try {
+        const { data: { user }, error: verifyError } = await supabase.auth.getUser(token);
+        if (verifyError || !user) throw new Error('Invalid token');
+        
+        const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+        if (!profile || profile.role !== 'super_admin') throw new Error('Forbidden: Super Admin only');
+
+        const { data, error } = await supabase.from('organizations').insert([{ name }]).select();
+        if (error) throw new Error(error.message);
+        
+        res.json({ message: 'Organization created successfully', organization: data[0] });
+    } catch(err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
+app.get('/api/organizations', async (req, res) => {
+    const { token } = req.query;
+    try {
+        const { data: { user }, error: verifyError } = await supabase.auth.getUser(token);
+        if (verifyError || !user) throw new Error('Invalid token');
+        
+        const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+        if (!profile || profile.role !== 'super_admin') throw new Error('Forbidden: Super Admin only');
+
+        const { data, error } = await supabase.from('organizations').select('*');
+        if (error) throw new Error(error.message);
+        
+        res.json({ organizations: data || [] });
+    } catch(err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
+app.post('/api/auth/create_master_admin', async (req, res) => {
+    const { token, email, password, organization_id } = req.body;
+    try {
+        if (!organization_id) throw new Error('Organization ID is required to create a Master Admin.');
+        
+        const { data: { user: adminUser }, error: verifyError } = await supabase.auth.getUser(token);
+        if (verifyError || !adminUser) throw new Error('Invalid token');
+        
+        const { data: profile } = await supabase.from('profiles').select('role').eq('id', adminUser.id).single();
+        if (!profile || profile.role !== 'super_admin') throw new Error('Forbidden: Super Admin only');
+
+        const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
+            email, password, email_confirm: true
+        });
+        if (createError) throw new Error(createError.message);
+
+        const { error: profileError } = await supabase.from('profiles').insert([
+          { id: newUser.user.id, role: 'master_admin', first_login_complete: true, organization_id }
+        ]);
+        if (profileError) throw new Error(profileError.message);
+
+        res.json({ message: 'Master Admin created successfully.', credentials: { email, password } });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
+app.get('/api/analytics/system', async (req, res) => {
+    const { token } = req.query;
+    try {
+        const { data: { user }, error: verifyError } = await supabase.auth.getUser(token);
+        if (verifyError || !user) throw new Error('Invalid token');
+        
+        const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+        if (!profile || profile.role !== 'super_admin') throw new Error('Forbidden: Super Admin only');
+
+        const { data: orgs } = await supabase.from('organizations').select('id');
+        const { data: profilesData } = await supabase.from('profiles').select('role');
+        
+        const masterAdmins = profilesData ? profilesData.filter(p => p.role === 'master_admin').length : 0;
+        const issuers = profilesData ? profilesData.filter(p => p.role === 'issuer').length : 0;
+        const normalUsers = profilesData ? profilesData.filter(p => p.role === 'user').length : 0;
+        
+        const allDocs = JSON.parse(fs.readFileSync(dbPath));
+        const totalDocs = allDocs.length;
+        
+        res.json({
+            stats: {
+                totalOrganizations: orgs ? orgs.length : 0,
+                totalMasterAdmins: masterAdmins,
+                totalIssuers: issuers,
+                totalUsers: normalUsers,
+                totalDocuments: totalDocs
+            }
+        });
+    } catch(err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
+app.get('/api/analytics/organization/:id', async (req, res) => {
+    const { token } = req.query;
+    const orgId = req.params.id;
+    try {
+        const { data: { user }, error: verifyError } = await supabase.auth.getUser(token);
+        if (verifyError || !user) throw new Error('Invalid token');
+        
+        const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+        if (!profile || profile.role !== 'super_admin') throw new Error('Forbidden: Super Admin only');
+
+        // Fetch all users and profiles to match email to organization
+        const { data: authUsers } = await supabase.auth.admin.listUsers();
+        const { data: profilesData } = await supabase.from('profiles').select('*');
+
+        const orgProfiles = profilesData ? profilesData.filter(p => p.organization_id === orgId) : [];
+        const masterAdmins = orgProfiles.filter(p => p.role === 'master_admin').length;
+        const issuers = orgProfiles.filter(p => p.role === 'issuer').length;
+        const normalUsers = orgProfiles.filter(p => p.role === 'user').length;
+
+        // Map issuer emails in this org
+        const orgIssuerEmails = authUsers ? authUsers.users
+            .filter(u => {
+                const prof = orgProfiles.find(p => p.id === u.id);
+                return prof && prof.role === 'issuer';
+            })
+            .map(u => u.email.toLowerCase()) : [];
+
+        // Filter documents issued by these issuers
+        const allDocs = JSON.parse(fs.readFileSync(dbPath));
+        const orgDocs = allDocs.filter(d => d.issuer && orgIssuerEmails.includes(d.issuer.toLowerCase())).length;
+
+        res.json({
+            stats: {
+                totalMasterAdmins: masterAdmins,
+                totalIssuers: issuers,
+                totalUsers: normalUsers,
+                totalDocuments: orgDocs
+            }
+        });
+    } catch(err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
+app.put('/api/users/:id', async (req, res) => {
+    const { masterAdminToken, email, password, role, organization_id } = req.body;
+    const userId = req.params.id;
+
+    if (!masterAdminToken) return res.status(401).json({ error: 'Unauthorized' });
+
+    try {
+        const { data: { user: adminUser }, error: verifyError } = await supabase.auth.getUser(masterAdminToken);
+        if (verifyError || !adminUser) throw new Error('Invalid token');
+
+        const { data: adminProfile } = await supabase.from('profiles').select('role, organization_id').eq('id', adminUser.id).single();
+        if (!adminProfile || (adminProfile.role !== 'master_admin' && adminProfile.role !== 'super_admin')) throw new Error('Forbidden');
+
+        // Tenant Isolation: If not super admin, check if user belongs to the same org
+        if (adminProfile.role !== 'super_admin') {
+            const { data: targetProfile } = await supabase.from('profiles').select('organization_id').eq('id', userId).single();
+            if (!targetProfile || targetProfile.organization_id !== adminProfile.organization_id) {
+                throw new Error('Forbidden: Cannot modify a user from a different organization.');
+            }
+        }
+
+        // Update auth user if password or email is provided
+        const updateData = {};
+        if (email) updateData.email = email;
+        if (password) updateData.password = password;
+
+        if (Object.keys(updateData).length > 0) {
+            const { error: updateError } = await supabase.auth.admin.updateUserById(userId, updateData);
+            if (updateError) throw new Error(updateError.message);
+        }
+
+        // Update profile role / organization if provided
+        const profileUpdates = {};
+        if (role) profileUpdates.role = role;
+        if (organization_id !== undefined) profileUpdates.organization_id = organization_id;
+
+        if (Object.keys(profileUpdates).length > 0) {
+            const { error: profileError } = await supabase.from('profiles').update(profileUpdates).eq('id', userId);
+            if (profileError) throw new Error(profileError.message);
+        }
+
+        res.json({ message: 'User updated successfully' });
     } catch (error) {
         res.status(400).json({ error: error.message });
     }
