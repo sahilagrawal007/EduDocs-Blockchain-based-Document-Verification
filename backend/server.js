@@ -733,8 +733,9 @@ app.get('/api/analytics/system', async (req, res) => {
         const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
         if (!profile || profile.role !== 'super_admin') throw new Error('Forbidden: Super Admin only');
 
-        const { data: orgs } = await supabase.from('organizations').select('id');
-        const { data: profilesData } = await supabase.from('profiles').select('role');
+        const { data: orgs } = await supabase.from('organizations').select('*');
+        const { data: profilesData } = await supabase.from('profiles').select('*');
+        const { data: authUsers } = await supabase.auth.admin.listUsers();
         
         const masterAdmins = profilesData ? profilesData.filter(p => p.role === 'master_admin').length : 0;
         const issuers = profilesData ? profilesData.filter(p => p.role === 'issuer').length : 0;
@@ -742,6 +743,37 @@ app.get('/api/analytics/system', async (req, res) => {
         
         const allDocs = JSON.parse(fs.readFileSync(dbPath));
         const totalDocs = allDocs.length;
+
+        // Build organization breakdown
+        const orgsBreakdown = [];
+        if (orgs && profilesData) {
+            for (const org of orgs) {
+                const orgProfiles = profilesData.filter(p => p.organization_id === org.id);
+                const orgMasterAdmins = orgProfiles.filter(p => p.role === 'master_admin').length;
+                const orgIssuers = orgProfiles.filter(p => p.role === 'issuer').length;
+                const orgNormalUsers = orgProfiles.filter(p => p.role === 'user').length;
+
+                // Find issuer emails in this org
+                const orgIssuerEmails = authUsers ? authUsers.users
+                    .filter(u => {
+                        const prof = orgProfiles.find(p => p.id === u.id);
+                        return prof && prof.role === 'issuer';
+                    })
+                    .map(u => u.email.toLowerCase()) : [];
+
+                // Filter docs issued by these issuers
+                const orgDocs = allDocs.filter(d => d.issuer && orgIssuerEmails.includes(d.issuer.toLowerCase())).length;
+
+                orgsBreakdown.push({
+                    id: org.id,
+                    name: org.name,
+                    masterAdmins: orgMasterAdmins,
+                    issuers: orgIssuers,
+                    users: orgNormalUsers,
+                    documentsCount: orgDocs
+                });
+            }
+        }
         
         res.json({
             stats: {
@@ -749,7 +781,8 @@ app.get('/api/analytics/system', async (req, res) => {
                 totalMasterAdmins: masterAdmins,
                 totalIssuers: issuers,
                 totalUsers: normalUsers,
-                totalDocuments: totalDocs
+                totalDocuments: totalDocs,
+                organizationsBreakdown: orgsBreakdown
             }
         });
     } catch(err) {
@@ -786,14 +819,31 @@ app.get('/api/analytics/organization/:id', async (req, res) => {
 
         // Filter documents issued by these issuers
         const allDocs = JSON.parse(fs.readFileSync(dbPath));
-        const orgDocs = allDocs.filter(d => d.issuer && orgIssuerEmails.includes(d.issuer.toLowerCase())).length;
+        const orgDocsArray = allDocs.filter(d => d.issuer && orgIssuerEmails.includes(d.issuer.toLowerCase()));
+
+        // Build last 7 days activity trend
+        const trend = [];
+        for (let i = 6; i >= 0; i--) {
+            const dateObj = new Date();
+            dateObj.setDate(dateObj.getDate() - i);
+            const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            
+            const count = orgDocsArray.filter(d => {
+                if (!d.issuedAt) return false;
+                const docDate = new Date(d.issuedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                return docDate === dateStr;
+            }).length;
+
+            trend.push({ date: dateStr, count });
+        }
 
         res.json({
             stats: {
                 totalMasterAdmins: masterAdmins,
                 totalIssuers: issuers,
                 totalUsers: normalUsers,
-                totalDocuments: orgDocs
+                totalDocuments: orgDocsArray.length,
+                activityTrend: trend
             }
         });
     } catch(err) {

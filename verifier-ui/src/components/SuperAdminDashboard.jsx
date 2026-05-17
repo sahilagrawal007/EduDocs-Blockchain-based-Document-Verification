@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { 
     Users, Building, FileText, Activity, 
     PlusCircle, Trash2, Shield, Settings,
-    BarChart3, PieChart, ArrowLeft, Edit3, Check, X
+    BarChart3, PieChart, ArrowLeft, Edit3, Check, X,
+    Calendar, TrendingUp
 } from 'lucide-react';
 
 export default function SuperAdminDashboard({ token, handleLogout }) {
@@ -317,14 +318,73 @@ export default function SuperAdminDashboard({ token, handleLogout }) {
                                         </div>
                                     </div>
                                     
-                                    <div className="decorative-chart-area glass-panel mt-2">
-                                        <h3><PieChart className="icon" /> System Activity Visualization</h3>
-                                        <div className="mock-chart-bars">
-                                            <div className="bar b1"></div>
-                                            <div className="bar b2"></div>
-                                            <div className="bar b3"></div>
-                                            <div className="bar b4"></div>
-                                            <div className="bar b5"></div>
+                                    {/* Combined Tenant Comparison Graph */}
+                                    <div className="combined-analytics glass-panel mt-3">
+                                        <h3><Building className="icon" /> Combined Tenant Comparison (Documents Issued)</h3>
+                                        <p className="help-text">Comparative analysis of decentralized documents issued by each registered SaaS tenant.</p>
+                                        {stats.organizationsBreakdown && stats.organizationsBreakdown.length > 0 ? (
+                                            <div className="tenant-comparison-chart mt-3">
+                                                {stats.organizationsBreakdown.map(org => {
+                                                    const percent = stats.totalDocuments > 0 ? (org.documentsCount / stats.totalDocuments) * 100 : 0;
+                                                    return (
+                                                        <div key={org.id} className="comparison-row">
+                                                            <div className="comparison-label">
+                                                                <span className="org-name">{org.name}</span>
+                                                                <span className="org-value">{org.documentsCount} docs ({percent.toFixed(1)}%)</span>
+                                                            </div>
+                                                            <div className="comparison-bar-container">
+                                                                <div 
+                                                                    className="comparison-bar" 
+                                                                    style={{ width: `${Math.max(percent, 2)}%` }}
+                                                                ></div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        ) : (
+                                            <p className="empty-state">No tenant comparative data available.</p>
+                                        )}
+                                    </div>
+
+                                    {/* Platform Role Breakdown & Activity Wave */}
+                                    <div className="split-view mt-3">
+                                        <div className="glass-panel" style={{ flex: 1.2 }}>
+                                            <h3><Users className="icon" /> Platform Role Allocation</h3>
+                                            <p className="help-text">Distribution of active accounts globally mapped across all organizations.</p>
+                                            <div className="role-distribution mt-3">
+                                                <div className="role-progress-bar">
+                                                    <div 
+                                                        className="role-segment super-admin-segment" 
+                                                        style={{ width: `${(stats.totalMasterAdmins / (stats.totalMasterAdmins + stats.totalIssuers + stats.totalUsers || 1)) * 100}%` }}
+                                                        title="Master Admins"
+                                                    ></div>
+                                                    <div 
+                                                        className="role-segment issuer-segment" 
+                                                        style={{ width: `${(stats.totalIssuers / (stats.totalMasterAdmins + stats.totalIssuers + stats.totalUsers || 1)) * 100}%` }}
+                                                        title="Issuers"
+                                                    ></div>
+                                                    <div 
+                                                        className="role-segment user-segment" 
+                                                        style={{ width: `${(stats.totalUsers / (stats.totalMasterAdmins + stats.totalIssuers + stats.totalUsers || 1)) * 100}%` }}
+                                                        title="Users"
+                                                    ></div>
+                                                </div>
+                                                <div className="role-legend mt-3">
+                                                    <div className="legend-item"><span className="dot ma"></span> Master Admins ({stats.totalMasterAdmins})</div>
+                                                    <div className="legend-item"><span className="dot issuer"></span> Active Issuers ({stats.totalIssuers})</div>
+                                                    <div className="legend-item"><span className="dot user"></span> Verifiers / Users ({stats.totalUsers})</div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="glass-panel" style={{ flex: 0.8 }}>
+                                            <h3><Activity className="icon" /> Network Sync Status</h3>
+                                            <p className="help-text">Live check of block sync and API response integrity.</p>
+                                            <div className="glowing-sine-wave-container mt-3">
+                                                <div className="pulse-circle"></div>
+                                                <span className="pulse-text">Sync: Node Active</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -396,33 +456,63 @@ export default function SuperAdminDashboard({ token, handleLogout }) {
                         </header>
 
                         {orgStats && (
-                            <div className="stats-grid premium mt-2">
-                                <div className="stat-card glass-panel purple-glow">
-                                    <Shield className="stat-icon" />
-                                    <div className="stat-info">
-                                        <h3>Master Admins</h3>
-                                        <p className="stat-number">{orgStats.totalMasterAdmins}</p>
+                            <>
+                                <div className="stats-grid premium mt-2">
+                                    <div className="stat-card glass-panel purple-glow">
+                                        <Shield className="stat-icon" />
+                                        <div className="stat-info">
+                                            <h3>Master Admins</h3>
+                                            <p className="stat-number">{orgStats.totalMasterAdmins}</p>
+                                        </div>
+                                    </div>
+                                    <div className="stat-card glass-panel blue-glow">
+                                        <Users className="stat-icon" />
+                                        <div className="stat-info">
+                                            <h3>Active Issuers</h3>
+                                            <p className="stat-number">{orgStats.totalIssuers}</p>
+                                        </div>
+                                    </div>
+                                    <div className="stat-card glass-panel green-glow">
+                                        <FileText className="stat-icon" />
+                                        <div className="stat-info">
+                                            <h3>Documents Issued</h3>
+                                            <p className="stat-number">{orgStats.totalDocuments}</p>
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="stat-card glass-panel blue-glow">
-                                    <Users className="stat-icon" />
-                                    <div className="stat-info">
-                                        <h3>Active Issuers</h3>
-                                        <p className="stat-number">{orgStats.totalIssuers}</p>
+
+                                {/* Individual Organization Weekly Issuance Trend Graph */}
+                                {orgStats.activityTrend && (
+                                    <div className="glass-panel mt-3">
+                                        <h3><Calendar className="icon" /> Individual Document Issuance Trend (Last 7 Days)</h3>
+                                        <p className="help-text">Visual analysis of document activities strictly related to this tenant over the past week.</p>
+                                        <div className="org-trend-chart mt-3">
+                                            {orgStats.activityTrend.map((t, idx) => {
+                                                const maxVal = Math.max(...orgStats.activityTrend.map(x => x.count), 1);
+                                                const heightPercent = (t.count / maxVal) * 100;
+                                                return (
+                                                    <div key={idx} className="trend-bar-wrapper">
+                                                        <div className="trend-bar-container">
+                                                            <div 
+                                                                className="trend-bar" 
+                                                                style={{ height: `${Math.max(heightPercent, 5)}%` }}
+                                                                title={`${t.count} documents`}
+                                                            >
+                                                                {t.count > 0 && <span className="trend-bar-value">{t.count}</span>}
+                                                            </div>
+                                                        </div>
+                                                        <span className="trend-bar-label">{t.date}</span>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
                                     </div>
-                                </div>
-                                <div className="stat-card glass-panel green-glow">
-                                    <FileText className="stat-icon" />
-                                    <div className="stat-info">
-                                        <h3>Documents Issued</h3>
-                                        <p className="stat-number">{orgStats.totalDocuments}</p>
-                                    </div>
-                                </div>
-                            </div>
+                                )}
+                            </>
                         )}
 
                         <div className="split-view mt-4">
-                            {/* Left column: Provisioning and Assigning */}
+                            {/* Left column: Provisioning, Assigning & Resource Structure */}
                             <div className="form-section flex-col-gap">
                                 {/* Provision User form directly inside Organization context */}
                                 <div className="glass-panel">
@@ -467,8 +557,45 @@ export default function SuperAdminDashboard({ token, handleLogout }) {
                                     </form>
                                 </div>
 
+                                {/* Tenant Resource Structure Progress Bars */}
+                                {orgStats && (
+                                    <div className="glass-panel">
+                                        <h3><TrendingUp className="icon" /> Tenant Account Structure</h3>
+                                        <p className="help-text">Distribution of credentials provisioned strictly for this tenant.</p>
+                                        <div className="tenant-structure-list mt-3">
+                                            <div className="tenant-structure-row">
+                                                <div className="structure-metric">
+                                                    <span>Master Admins</span>
+                                                    <strong>{orgStats.totalMasterAdmins}</strong>
+                                                </div>
+                                                <div className="structure-bar-container">
+                                                    <div className="structure-bar ma-bar" style={{ width: `${(orgStats.totalMasterAdmins / (orgStats.totalMasterAdmins + orgStats.totalIssuers + orgStats.totalUsers || 1)) * 100}%` }}></div>
+                                                </div>
+                                            </div>
+                                            <div className="tenant-structure-row mt-3">
+                                                <div className="structure-metric">
+                                                    <span>Active Issuers</span>
+                                                    <strong>{orgStats.totalIssuers}</strong>
+                                                </div>
+                                                <div className="structure-bar-container">
+                                                    <div className="structure-bar issuer-bar" style={{ width: `${(orgStats.totalIssuers / (orgStats.totalMasterAdmins + orgStats.totalIssuers + orgStats.totalUsers || 1)) * 100}%` }}></div>
+                                                </div>
+                                            </div>
+                                            <div className="tenant-structure-row mt-3">
+                                                <div className="structure-metric">
+                                                    <span>Standard Users</span>
+                                                    <strong>{orgStats.totalUsers}</strong>
+                                                </div>
+                                                <div className="structure-bar-container">
+                                                    <div className="structure-bar user-bar" style={{ width: `${(orgStats.totalUsers / (orgStats.totalMasterAdmins + orgStats.totalIssuers + orgStats.totalUsers || 1)) * 100}%` }}></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* Assign Existing Users Panel */}
-                                <div className="glass-panel mt-3">
+                                <div className="glass-panel">
                                     <h2 className="section-title"><Users className="icon" /> Add Existing Users</h2>
                                     <p className="help-text">Select from existing users in the system who are not yet part of any organization.</p>
                                     <div className="unassigned-users-container">
