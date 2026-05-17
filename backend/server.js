@@ -176,6 +176,112 @@ app.post('/api/auth/create_user', async (req, res) => {
   }
 });
 
+app.post('/api/auth/bulk_create_users', async (req, res) => {
+  const { masterAdminToken, emails, role } = req.body;
+  
+  if (!masterAdminToken || !emails || !Array.isArray(emails) || !role) {
+    return res.status(400).json({ error: 'Missing required parameters' });
+  }
+  
+  try {
+    // 1. Verify master admin or super admin
+    const { data: { user: adminUser }, error: verifyError } = await supabase.auth.getUser(masterAdminToken);
+    if (verifyError || !adminUser) throw new Error('Invalid token');
+    
+    const { data: adminProfile } = await supabase.from('profiles').select('organization_id, role').eq('id', adminUser.id).single();
+    if (!adminProfile || (adminProfile.role !== 'master_admin' && adminProfile.role !== 'super_admin')) {
+        throw new Error('Unauthorized role. Only administrators can import users.');
+    }
+    const orgId = adminProfile ? adminProfile.organization_id : null;
+    if (!orgId) {
+        throw new Error('Admin must belong to an organization to import users.');
+    }
+
+    const results = { success: [], errors: [] };
+
+    // 2. Loop and create each user
+    for (const rawEmail of emails) {
+        const email = rawEmail.trim().toLowerCase();
+        if (!email || !email.includes('@')) {
+            results.errors.push({ email, error: 'Invalid email address' });
+            continue;
+        }
+        
+        try {
+            // Generate automatic secure random password (8 chars random + suffix)
+            const password = crypto.randomBytes(6).toString('hex') + 'Edu!1';
+            
+            // Create Supabase user
+            const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
+              email,
+              password,
+              email_confirm: true
+            });
+            if (createError) throw new Error(createError.message);
+
+            // Generate Hardhat Wallet
+            const wallet = ethers.Wallet.createRandom();
+            const hardhat_key = wallet.privateKey;
+            const address = wallet.address;
+
+            // Optional: Fund the wallet if it's an issuer
+            if (role === 'issuer') {
+                try {
+                    const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
+                    const funderWallet = new ethers.Wallet(HARDHAT_FUNDER_KEY, provider);
+                    const tx = await funderWallet.sendTransaction({
+                        to: address,
+                        value: ethers.utils.parseEther("1.0")
+                    });
+                    await tx.wait();
+                } catch (err) {
+                    console.log("Could not auto-fund wallet (node might be down), proceeding anyway.");
+                }
+            }
+
+            // Save profile config
+            const { error: profileError } = await supabase.from('profiles').insert([
+              { 
+                id: newUser.user.id, 
+                role: role, 
+                blockchain_address: address,
+                first_login_complete: false,
+                organization_id: orgId
+              }
+            ]);
+            if (profileError) throw new Error(profileError.message);
+
+            // Send real email via SMTP welcome details
+            const mailOptions = {
+                from: `"EduDocs Admin" <${process.env.SMTP_USER || 'no-reply@edudocs.test'}>`,
+                to: email,
+                subject: 'Your EduDocs Account Credentials Ready',
+                text: `Welcome! An administrator has created an account for you on the EduDocs Platform.\n\nHere are your first-time login credentials:\n\nEmail: ${email}\nPassword: ${password}\nHasdnet Free Token (Private Key): ${hardhat_key}\n\nYou will need all three to login the first time. Keep your private key safe!`,
+            };
+            
+            try {
+                if (transporter) {
+                    await transporter.sendMail(mailOptions);
+                }
+            } catch (mailErr) {
+                console.error('Error sending welcome email:', mailErr);
+            }
+
+            results.success.push({ email, address });
+        } catch (singleErr) {
+            results.errors.push({ email, error: singleErr.message });
+        }
+    }
+
+    res.json({ 
+        message: `Bulk import completed. Created: ${results.success.length}, Failed: ${results.errors.length}`,
+        results
+    });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
 // Custom first login
 app.post('/api/auth/first_login', async (req, res) => {
   const { email, password, hardhat_key } = req.body;

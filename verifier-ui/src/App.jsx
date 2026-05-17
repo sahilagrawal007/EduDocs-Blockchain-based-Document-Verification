@@ -319,6 +319,7 @@ function App() {
               handleChangePassword={handleChangePassword}
               handleDeleteUser={handleDeleteUser}
               handleLogout={handleLogout}
+              token={token}
             />
           ) : <Navigate to="/login" />
         } />
