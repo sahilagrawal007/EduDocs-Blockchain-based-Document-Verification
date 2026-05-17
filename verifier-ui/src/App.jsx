@@ -8,6 +8,7 @@ import Login from './components/Login';
 import AdminDashboard from './components/AdminDashboard';
 import IssuerDashboard from './components/IssuerDashboard';
 import UserDashboard from './components/UserDashboard';
+import Profile from './components/Profile';
 
 function App() {
   const navigate = useNavigate();
@@ -31,6 +32,8 @@ function App() {
   const [credentialText, setCredentialText] = useState('');
   const [contractAddress, setContractAddress] = useState(config.contractAddress || '');
   const [file, setFile] = useState(null);
+  const [revokeCredentialId, setRevokeCredentialId] = useState('');
+  const [issuedDocuments, setIssuedDocuments] = useState([]);
   
   // Verify States
   const [verifyCredentialText, setVerifyCredentialText] = useState('');
@@ -80,6 +83,7 @@ function App() {
       }
       else if (data.role === 'issuer') {
           navigate('/issuer');
+          fetchIssuedDocuments(data.token);
       }
       else {
           navigate('/verifier');
@@ -193,9 +197,40 @@ function App() {
       });
       const data = await res.json();
       if (data.error) alert(data.error);
-      else alert(`Issued! TX Hash: ${data.transactionHash}`);
+      else {
+          alert(`Issued! TX Hash: ${data.transactionHash}`);
+          fetchIssuedDocuments(token);
+      }
     } catch (err) {
       alert("Error issuing document");
+    }
+  };
+
+  const handleRevoke = async (e, directCredentialId = null) => {
+    if (e) e.preventDefault();
+    const idToRevoke = directCredentialId || revokeCredentialId;
+    if (!idToRevoke) return alert("Enter a credential ID to revoke");
+    if (!window.confirm("Are you sure you want to permanently revoke this document?")) return;
+    try {
+      const res = await fetch('http://localhost:3000/api/revoke', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          credentialId: idToRevoke,
+          contractAddress: contractAddress,
+          issuerToken: token,
+          hardhatKey: localStorage.getItem('hardhatKey') || hardhatKey
+        })
+      });
+      const data = await res.json();
+      if (data.error) alert(data.error);
+      else {
+          alert(`Document revoked successfully! TX Hash: ${data.transactionHash}`);
+          setRevokeCredentialId('');
+          fetchIssuedDocuments(token);
+      }
+    } catch (err) {
+      alert("Error revoking document");
     }
   };
 
@@ -238,6 +273,16 @@ function App() {
       }
   };
 
+  const fetchIssuedDocuments = async (userToken) => {
+      try {
+          const res = await fetch(`http://localhost:3000/api/issued-documents?token=${userToken}`);
+          const data = await res.json();
+          if (data.documents) setIssuedDocuments(data.documents);
+      } catch (err) {
+          console.error("Failed to fetch issued documents", err);
+      }
+  };
+
   return (
     <div className="app-root">
       <Routes>
@@ -274,7 +319,10 @@ function App() {
               contractAddress={contractAddress} setContractAddress={setContractAddress}
               credentialText={credentialText} setCredentialText={setCredentialText}
               file={file} setFile={setFile}
+              revokeCredentialId={revokeCredentialId} setRevokeCredentialId={setRevokeCredentialId}
+              issuedDocuments={issuedDocuments}
               handleIssue={handleIssue}
+              handleRevoke={handleRevoke}
               verifyContractAddress={verifyContractAddress} setVerifyContractAddress={setVerifyContractAddress}
               verifyCredentialText={verifyCredentialText} setVerifyCredentialText={setVerifyCredentialText}
               verifyFile={verifyFile} setVerifyFile={setVerifyFile}
@@ -295,6 +343,19 @@ function App() {
               handleVerify={handleVerify}
               verifyResult={verifyResult}
               handleLogout={handleLogout}
+            />
+          ) : <Navigate to="/login" />
+        } />
+
+        <Route path="/profile" element={
+          token ? (
+            <Profile 
+              email={email} 
+              role={role} 
+              issuedDocuments={issuedDocuments} 
+              myDocuments={myDocuments} 
+              handleLogout={handleLogout} 
+              handleRevoke={handleRevoke}
             />
           ) : <Navigate to="/login" />
         } />

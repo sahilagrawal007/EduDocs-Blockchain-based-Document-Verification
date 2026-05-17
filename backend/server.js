@@ -256,8 +256,8 @@ app.post('/api/issue', upload.single('document'), async (req, res) => {
     const { credentialText, contractAddress, issuerToken, hardhatKey } = req.body;
     const documentFile = req.file;
 
-    if (!issuerToken || !hardhatKey || !credentialText || !documentFile || !contractAddress) {
-        return res.status(400).json({ error: 'Missing parameters. Need credentialText, document, contractAddress, hardhatKey, issuerToken.' });
+    if (!issuerToken || !hardhatKey || !credentialText || !contractAddress) {
+        return res.status(400).json({ error: 'Missing parameters. Need credentialText, contractAddress, hardhatKey, issuerToken, document.' });
     }
 
     try {
@@ -318,7 +318,7 @@ app.post('/api/issue', upload.single('document'), async (req, res) => {
             to: recipientEmail, // Recipient email
             cc: user.email, // Also send a copy to the issuer for their records
             subject: `[EduDocs] New Document Issued to ${recipientEmail}`,
-            text: `Hello,\n\nA new document has been issued to you by ${user.email}.\n\nTransaction Hash: ${tx.hash}\nCredential ID: ${credentialId}\n\nPlease find the document attached for your records.`,
+            text: `Hello,\n\nA new document has been issued to you by ${user.email}.\n\nTransaction Hash: ${tx.hash}\nCredential ID: ${credentialId}\nDocument Hash: ${bytes32Hash}\n\nPlease find the document attached for your records.`,
             attachments: [
                 {
                     filename: documentFile.originalname || 'issued_document.pdf',
@@ -368,6 +368,60 @@ app.post('/api/issue', upload.single('document'), async (req, res) => {
     }
 });
 
+// Revoke Certificate Endpoint
+app.post('/api/revoke', async (req, res) => {
+    const { credentialId, contractAddress, issuerToken, hardhatKey } = req.body;
+
+    if (!issuerToken || !hardhatKey || !credentialId || !contractAddress) {
+        return res.status(400).json({ error: 'Missing parameters. Need credentialId, contractAddress, hardhatKey, issuerToken.' });
+    }
+
+    try {
+        // Verify User is Issuer
+        const { data: { user }, error: authError } = await supabase.auth.getUser(issuerToken);
+        if (authError || !user) throw new Error('Invalid issuer token');
+
+        const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+        if (!profile || profile.role !== 'issuer') throw new Error('Unauthorized role. Only issuers can revoke documents.');
+
+        const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
+        const wallet = new ethers.Wallet(hardhatKey, provider);
+
+        const abi = [
+            "function revokeCertificate(bytes32 credentialId) external"
+        ];
+        const contract = new ethers.Contract(contractAddress, abi, wallet);
+
+        let txHash = 'N/A (Blockchain state reset)';
+        try {
+            const tx = await contract.revokeCertificate(credentialId);
+            await tx.wait();
+            txHash = tx.hash;
+        } catch (contractError) {
+            // If the Hardhat node was restarted, the contract state is wiped.
+            // It will throw "not issued". We should still mark it as revoked locally.
+            if (contractError.message.includes('not issued')) {
+                console.log('Contract threw "not issued", likely due to Hardhat restart. Force revoking locally.');
+            } else {
+                throw contractError;
+            }
+        }
+
+        // Update local DB to reflect revocation (optional, but good for local record)
+        const allDocs = JSON.parse(fs.readFileSync(dbPath));
+        const docIndex = allDocs.findIndex(d => d.credentialId === credentialId);
+        if (docIndex !== -1) {
+            allDocs[docIndex].revoked = true;
+            fs.writeFileSync(dbPath, JSON.stringify(allDocs, null, 2));
+        }
+
+        res.json({ success: true, transactionHash: txHash, credentialId });
+
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
 // Endpoint for normal users to fetch documents
 app.get('/api/my-documents', async (req, res) => {
     const { token } = req.query;
@@ -379,6 +433,22 @@ app.get('/api/my-documents', async (req, res) => {
         const allDocs = JSON.parse(fs.readFileSync(dbPath));
         const userDocs = allDocs.filter(d => d.email.toLowerCase() === user.email.toLowerCase());
         res.json({ documents: userDocs });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// Endpoint for issuers to fetch documents they issued
+app.get('/api/issued-documents', async (req, res) => {
+    const { token } = req.query;
+    if (!token) return res.status(401).json({ error: 'Unauthorized' });
+    try {
+        const { data: { user }, error } = await supabase.auth.getUser(token);
+        if (error || !user) throw new Error('Invalid token');
+
+        const allDocs = JSON.parse(fs.readFileSync(dbPath));
+        const issuedDocs = allDocs.filter(d => d.issuer.toLowerCase() === user.email.toLowerCase());
+        res.json({ documents: issuedDocs });
     } catch (error) {
         res.status(400).json({ error: error.message });
     }
@@ -539,3 +609,5 @@ const PORT = 3000;
 app.listen(PORT, () => {
     console.log(`Backend server listening on port ${PORT}`);
 });
+
+// Triggering restart

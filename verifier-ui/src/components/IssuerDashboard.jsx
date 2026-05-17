@@ -1,10 +1,14 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const IssuerDashboard = ({ 
   contractAddress, setContractAddress, 
   credentialText, setCredentialText, 
   file, setFile, 
+  revokeCredentialId, setRevokeCredentialId,
+  issuedDocuments,
   handleIssue, 
+  handleRevoke,
   verifyContractAddress, setVerifyContractAddress, 
   verifyCredentialText, setVerifyCredentialText, 
   verifyFile, setVerifyFile, 
@@ -12,6 +16,8 @@ const IssuerDashboard = ({
   verifyResult, 
   handleLogout 
 }) => {
+  const navigate = useNavigate();
+
   return (
     <div className="dashboard-container">
       <header className="dashboard-header animate-slide-down">
@@ -20,10 +26,11 @@ const IssuerDashboard = ({
           <h1>EduDocs</h1>
         </div>
         <div className="header-actions">
-            <div className="user-badge">
+            <div className="user-badge" style={{ cursor: 'pointer' }} onClick={() => navigate('/profile')}>
                 <div className="avatar-sm" style={{ background: '#f5f3ff', color: '#8b5cf6' }}>🏛️</div>
                 <span>Issuer</span>
             </div>
+            <button onClick={() => navigate('/profile')} className="btn-primary" style={{ background: '#64748b', padding: '10px 16px' }}>Profile</button>
             <button onClick={handleLogout} className="btn-logout">Sign Out</button>
         </div>
       </header>
@@ -148,6 +155,79 @@ const IssuerDashboard = ({
                </div>
             </div>
           )}
+        </section>
+      </div>
+
+      <div className="dashboard-layout" style={{ marginTop: '24px' }}>
+        {/* Issued Documents Section */}
+        <section className="dashboard-section card-white animate-fade-in full-span">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <h2>Documents Issued By You</h2>
+              <span className="status-badge success">{issuedDocuments ? issuedDocuments.length : 0} Documents</span>
+          </div>
+          <p className="section-subtitle">A record of all the credentials you have minted.</p>
+          
+          <div className="table-container">
+            <table className="modern-table">
+                <thead>
+                    <tr>
+                        <th>Recipient Identity</th>
+                        <th>Document Type</th>
+                        <th>Credential ID</th>
+                        <th>Issuance Date</th>
+                        <th style={{ textAlign: 'center' }}>Status</th>
+                        <th style={{ textAlign: 'center' }}>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {(!issuedDocuments || issuedDocuments.length === 0) ? (
+                        <tr><td colSpan="6" style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>You haven't issued any documents yet.</td></tr>
+                    ) : (
+                        issuedDocuments.map((doc, i) => (
+                            <tr key={i} className="table-row">
+                                <td>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <div style={{ width: '32px', height: '32px', background: '#f5f3ff', color: '#8b5cf6', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}>👤</div>
+                                        <span style={{ fontWeight: '600' }}>{doc.email}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <span>📄</span>
+                                        <span>{doc.originalName}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span style={{ fontFamily: 'monospace', fontSize: '12px', color: '#64748b', wordBreak: 'break-all', display: 'inline-block', maxWidth: '150px', cursor: 'pointer' }} title="Click to copy for revoking" onClick={() => { setRevokeCredentialId(doc.credentialId); alert('Copied to Revoke input!'); }}>
+                                        {doc.credentialId.substring(0, 10)}...{doc.credentialId.substring(doc.credentialId.length - 8)}
+                                    </span>
+                                </td>
+                                <td>{new Date(doc.issuedAt).toLocaleDateString()}</td>
+                                <td style={{ textAlign: 'center' }}>
+                                    {doc.revoked ? (
+                                        <span style={{ color: '#ef4444', fontWeight: 'bold', fontSize: '12px' }}>Revoked</span>
+                                    ) : (
+                                        <span style={{ color: '#10b981', fontWeight: 'bold', fontSize: '12px' }}>Active</span>
+                                    )}
+                                </td>
+                                <td style={{ textAlign: 'center' }}>
+                                    {!doc.revoked ? (
+                                        <button 
+                                            onClick={() => handleRevoke(null, doc.credentialId)}
+                                            style={{ background: '#ef4444', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}
+                                        >
+                                            Revoke
+                                        </button>
+                                    ) : (
+                                        <span style={{ color: '#94a3b8', fontSize: '12px' }}>-</span>
+                                    )}
+                                </td>
+                            </tr>
+                        ))
+                    )}
+                </tbody>
+            </table>
+          </div>
         </section>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const UserDashboard = ({ 
   myDocuments, 
@@ -9,6 +10,8 @@ const UserDashboard = ({
   verifyResult, 
   handleLogout 
 }) => {
+  const navigate = useNavigate();
+
   return (
     <div className="dashboard-container">
       <header className="dashboard-header animate-slide-down">
@@ -17,10 +20,11 @@ const UserDashboard = ({
           <h1>EduDocs</h1>
         </div>
         <div className="header-actions">
-            <div className="user-badge">
+            <div className="user-badge" style={{ cursor: 'pointer' }} onClick={() => navigate('/profile')}>
                 <div className="avatar-sm">👤</div>
                 <span>User</span>
             </div>
+            <button onClick={() => navigate('/profile')} className="btn-primary" style={{ background: '#64748b', padding: '10px 16px' }}>Profile</button>
             <button onClick={handleLogout} className="btn-logout">Sign Out</button>
         </div>
       </header>
@@ -40,6 +44,7 @@ const UserDashboard = ({
                     <tr>
                         <th>Issuer Source</th>
                         <th>Document Type</th>
+                        <th>Credential ID</th>
                         <th>Issuance Date</th>
                         <th style={{ textAlign: 'right' }}>Receipt & Proof</th>
                     </tr>
@@ -61,6 +66,11 @@ const UserDashboard = ({
                                         <span>📄</span>
                                         <span>{doc.originalName}</span>
                                     </div>
+                                </td>
+                                <td>
+                                    <span style={{ fontFamily: 'monospace', fontSize: '12px', color: '#64748b', wordBreak: 'break-all', display: 'inline-block', maxWidth: '150px' }} title={doc.credentialId}>
+                                        {doc.credentialId.substring(0, 10)}...{doc.credentialId.substring(doc.credentialId.length - 8)}
+                                    </span>
                                 </td>
                                 <td>{new Date(doc.issuedAt).toLocaleDateString()}</td>
                                 <td style={{ textAlign: 'right' }}>
