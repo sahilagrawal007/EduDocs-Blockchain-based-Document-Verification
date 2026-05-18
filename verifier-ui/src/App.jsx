@@ -16,6 +16,7 @@ function App() {
   const location = useLocation();
   const [token, setToken] = useState(null);
   const [role, setRole] = useState(null);
+  const [isSessionRestoring, setIsSessionRestoring] = useState(true);
   
   // Login States
   const [email, setEmail] = useState('');
@@ -45,12 +46,60 @@ function App() {
   // Verifier / Normal User States
   const [myDocuments, setMyDocuments] = useState([]);
 
-  // Handle Initial Redirect
+  // Recover persistent session on startup
   useEffect(() => {
-    if (!token && location.pathname !== '/login') {
-      navigate('/login');
+    const savedToken = localStorage.getItem('token');
+    if (savedToken) {
+      // Validate session with the backend
+      fetch('http://localhost:3000/api/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: savedToken })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) {
+          // Token expired or invalid, clear localStorage
+          localStorage.removeItem('token');
+          setIsSessionRestoring(false);
+          navigate('/login');
+        } else {
+          setToken(savedToken);
+          setRole(data.role);
+          setEmail(data.email);
+          if (data.hardhatKey) {
+            setHardhatKey(data.hardhatKey);
+          }
+          setIsSessionRestoring(false);
+          
+          // Re-fetch correct dashboard data and navigate
+          if (data.role === 'super_admin') {
+              if (location.pathname === '/login' || location.pathname === '/') navigate('/super-admin');
+          }
+          else if (data.role === 'master_admin') {
+              if (location.pathname === '/login' || location.pathname === '/') navigate('/admin');
+              fetchUsers(savedToken);
+          }
+          else if (data.role === 'issuer') {
+              if (location.pathname === '/login' || location.pathname === '/') navigate('/issuer');
+              fetchIssuedDocuments(savedToken);
+          }
+          else {
+              if (location.pathname === '/login' || location.pathname === '/') navigate('/verifier');
+              fetchMyDocuments(savedToken);
+          }
+        }
+      })
+      .catch(err => {
+        console.error("Failed to restore session", err);
+        localStorage.removeItem('token');
+        setIsSessionRestoring(false);
+        navigate('/login');
+      });
+    } else {
+      setIsSessionRestoring(false);
     }
-  }, [token, location.pathname, navigate]);
+  }, []);
   
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -73,6 +122,7 @@ function App() {
       
       setToken(data.token);
       setRole(data.role);
+      localStorage.setItem('token', data.token);
       
       if (data.hardhatKey) {
          setHardhatKey(data.hardhatKey);
@@ -100,6 +150,7 @@ function App() {
   };
 
   const handleLogout = () => {
+    localStorage.removeItem('token');
     setToken(null);
     setRole(null);
     navigate('/login');
@@ -286,6 +337,22 @@ function App() {
           console.error("Failed to fetch issued documents", err);
       }
   };
+
+  if (isSessionRestoring) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#0f172a', color: '#ffffff', fontFamily: 'sans-serif' }}>
+        <div style={{ width: '50px', height: '50px', border: '5px solid #334155', borderTop: '5px solid #6366f1', borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: '20px' }}></div>
+        <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 'bold' }}>Securing Session...</h3>
+        <p style={{ margin: '8px 0 0 0', color: '#94a3b8', fontSize: '14px' }}>Connecting to blockchain verification gateway</p>
+        <style>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
+  }
 
   return (
     <div className="app-root">

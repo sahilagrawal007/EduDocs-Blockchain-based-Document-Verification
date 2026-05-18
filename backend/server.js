@@ -1109,6 +1109,33 @@ app.put('/api/profile/hardhat-key', async (req, res) => {
     }
 });
 
+// Retrieve active session details securely
+app.post('/api/auth/session', async (req, res) => {
+    const { token } = req.body;
+    if (!token) return res.status(400).json({ error: 'Token is required.' });
+
+    try {
+        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+        if (authError || !user) throw new Error('Session expired or invalid token.');
+
+        const { data: profile, error: profileErr } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+
+        if (profileErr || !profile) throw new Error('Profile not found.');
+
+        res.json({
+            email: user.email,
+            role: profile.role,
+            hardhatKey: profile.hardhat_key
+        });
+    } catch(err) {
+        res.status(401).json({ error: err.message });
+    }
+});
+
 // Provide standard 404
 app.use((req, res) => res.status(404).send('Not Found'));
 
