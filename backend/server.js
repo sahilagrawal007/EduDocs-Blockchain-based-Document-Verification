@@ -84,6 +84,31 @@ try {
 
 const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS || localConfig.contractAddress;
 
+function sanitizeAndValidatePrivateKey(key) {
+    if (!key || typeof key !== 'string') {
+        throw new Error('Private key must be a valid string.');
+    }
+    let sanitized = key.trim();
+    if (sanitized.startsWith('"') && sanitized.endsWith('"')) {
+        sanitized = sanitized.slice(1, -1).trim();
+    }
+    if (sanitized.startsWith("'") && sanitized.endsWith("'")) {
+        sanitized = sanitized.slice(1, -1).trim();
+    }
+    
+    let hex = sanitized.startsWith('0x') ? sanitized.slice(2) : sanitized;
+    
+    if (hex.length === 40) {
+        throw new Error('You pasted a Blockchain Address (40 characters) instead of a Private Key (64 characters). Please check your welcome credentials and enter the correct private key.');
+    }
+    
+    if (hex.length !== 64 || !/^[0-9a-fA-F]+$/.test(hex)) {
+        throw new Error('Invalid Private Key length or characters. An Ethereum private key must be exactly 64 hexadecimal characters (66 with "0x").');
+    }
+    
+    return sanitized.startsWith('0x') ? sanitized : '0x' + sanitized;
+}
+
 app.post('/api/auth/create_user', async (req, res) => {
   const { masterAdminToken, email, password, role } = req.body;
   
@@ -136,6 +161,7 @@ app.post('/api/auth/create_user', async (req, res) => {
         id: newUser.user.id, 
         role: role, 
         blockchain_address: address,
+        hardhat_key: hardhat_key,
         first_login_complete: false,
         organization_id: orgId
       }
@@ -245,6 +271,7 @@ app.post('/api/auth/bulk_create_users', async (req, res) => {
                 id: newUser.user.id, 
                 role: role, 
                 blockchain_address: address,
+                hardhat_key: hardhat_key,
                 first_login_complete: false,
                 organization_id: orgId
               }
@@ -314,21 +341,23 @@ app.post('/api/auth/first_login', async (req, res) => {
 
     // 3. Verify hardhat key matches the assigned address
     let derivedAddress;
+    let validatedKey;
     try {
-        const wallet = new ethers.Wallet(hardhat_key);
+        validatedKey = sanitizeAndValidatePrivateKey(hardhat_key);
+        const wallet = new ethers.Wallet(validatedKey);
         derivedAddress = wallet.address;
     } catch(e) {
-        throw new Error('Invalid hardhat token format.');
+        throw new Error(e.message || 'Invalid hardhat token format.');
     }
 
     if (derivedAddress.toLowerCase() !== profile.blockchain_address.toLowerCase()) {
         throw new Error('Hardhat token does not match your assigned address.');
     }
 
-    // 4. Update profile to mark first_login_complete
+    // 4. Update profile to mark first_login_complete and store hardhat_key
     const { error: updateError } = await supabase
         .from('profiles')
-        .update({ first_login_complete: true })
+        .update({ first_login_complete: true, hardhat_key: validatedKey })
         .eq('id', userId);
         
     if (updateError) throw new Error('Failed to update login status.');
@@ -338,7 +367,8 @@ app.post('/api/auth/first_login', async (req, res) => {
         message: 'First login successful', 
         token: userToken, 
         role: profile.role,
-        address: derivedAddress
+        address: derivedAddress,
+        hardhatKey: validatedKey
     });
 
   } catch(error) {
@@ -367,7 +397,8 @@ app.post('/api/auth/login', async (req, res) => {
 
         res.json({ 
             token: authData.session.access_token, 
-            role: profile ? profile.role : 'user' 
+            role: profile ? profile.role : 'user',
+            hardhatKey: profile ? profile.hardhat_key : null
         });
     } catch(error) {
         res.status(400).json({ error: error.message });
@@ -376,11 +407,12 @@ app.post('/api/auth/login', async (req, res) => {
 
 // Issue Certificate Endpoint
 app.post('/api/issue', upload.single('document'), async (req, res) => {
-    const { credentialText, contractAddress, issuerToken, hardhatKey } = req.body;
+    const { credentialText, contractAddress, issuerToken } = req.body;
+    let { hardhatKey } = req.body;
     const documentFile = req.file;
 
-    if (!issuerToken || !hardhatKey || !credentialText || !contractAddress) {
-        return res.status(400).json({ error: 'Missing parameters. Need credentialText, contractAddress, hardhatKey, issuerToken, document.' });
+    if (!issuerToken || !credentialText || !contractAddress) {
+        return res.status(400).json({ error: 'Missing parameters. Need credentialText, contractAddress, issuerToken, document.' });
     }
 
     try {
@@ -388,8 +420,20 @@ app.post('/api/issue', upload.single('document'), async (req, res) => {
         const { data: { user }, error: authError } = await supabase.auth.getUser(issuerToken);
         if (authError || !user) throw new Error('Invalid issuer token');
 
-        const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+        const { data: profile } = await supabase.from('profiles').select('role, hardhat_key').eq('id', user.id).single();
         if (!profile || profile.role !== 'issuer') throw new Error('Unauthorized role. Only issuers can issue documents.');
+
+        const finalHardhatKey = hardhatKey || (profile ? profile.hardhat_key : null);
+        if (!finalHardhatKey) {
+            return res.status(400).json({ error: 'Missing hardhatKey. Please make sure the hardhat free token is configured for your account.' });
+        }
+
+        let validatedKey;
+        try {
+            validatedKey = sanitizeAndValidatePrivateKey(finalHardhatKey);
+        } catch(e) {
+            return res.status(400).json({ error: e.message });
+        }
 
         // Compute SHA-256 hash of file buffer
         const hash = crypto.createHash('sha256').update(documentFile.buffer).digest('hex');
@@ -399,7 +443,7 @@ app.post('/api/issue', upload.single('document'), async (req, res) => {
         const credentialId = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(credentialText + bytes32Hash));
 
         const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
-        const wallet = new ethers.Wallet(hardhatKey, provider);
+        const wallet = new ethers.Wallet(validatedKey, provider);
 
         // --- SELF-HEALING (IF HARDHAT RESTARTED) ---
         // 1. Ensure issuer has ETH
@@ -512,10 +556,11 @@ app.post('/api/issue', upload.single('document'), async (req, res) => {
 
 // Revoke Certificate Endpoint
 app.post('/api/revoke', async (req, res) => {
-    const { credentialId, contractAddress, issuerToken, hardhatKey } = req.body;
+    const { credentialId, contractAddress, issuerToken } = req.body;
+    let { hardhatKey } = req.body;
 
-    if (!issuerToken || !hardhatKey || !credentialId || !contractAddress) {
-        return res.status(400).json({ error: 'Missing parameters. Need credentialId, contractAddress, hardhatKey, issuerToken.' });
+    if (!issuerToken || !credentialId || !contractAddress) {
+        return res.status(400).json({ error: 'Missing parameters. Need credentialId, contractAddress, issuerToken.' });
     }
 
     try {
@@ -523,11 +568,23 @@ app.post('/api/revoke', async (req, res) => {
         const { data: { user }, error: authError } = await supabase.auth.getUser(issuerToken);
         if (authError || !user) throw new Error('Invalid issuer token');
 
-        const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+        const { data: profile } = await supabase.from('profiles').select('role, hardhat_key').eq('id', user.id).single();
         if (!profile || profile.role !== 'issuer') throw new Error('Unauthorized role. Only issuers can revoke documents.');
 
+        const finalHardhatKey = hardhatKey || (profile ? profile.hardhat_key : null);
+        if (!finalHardhatKey) {
+            return res.status(400).json({ error: 'Missing hardhatKey. Please make sure the hardhat free token is configured for your account.' });
+        }
+
+        let validatedKey;
+        try {
+            validatedKey = sanitizeAndValidatePrivateKey(finalHardhatKey);
+        } catch(e) {
+            return res.status(400).json({ error: e.message });
+        }
+
         const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
-        const wallet = new ethers.Wallet(hardhatKey, provider);
+        const wallet = new ethers.Wallet(validatedKey, provider);
 
         const abi = [
             "function revokeCertificate(bytes32 credentialId) external"
@@ -1001,6 +1058,54 @@ app.put('/api/users/:id', async (req, res) => {
         res.json({ message: 'User updated successfully' });
     } catch (error) {
         res.status(400).json({ error: error.message });
+    }
+});
+
+// Update own blockchain hardhat key
+app.put('/api/profile/hardhat-key', async (req, res) => {
+    const { token, hardhatKey } = req.body;
+    if (!token || !hardhatKey) {
+        return res.status(400).json({ error: 'Token and hardhatKey are required.' });
+    }
+
+    try {
+        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+        if (authError || !user) throw new Error('Invalid user token.');
+
+        // Verify hardhat key format and that it matches the blockchain address in the profile
+        const { data: profile, error: profileErr } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+
+        if (profileErr || !profile) throw new Error('Profile not found.');
+
+        let derivedAddress;
+        let validatedKey;
+        try {
+            validatedKey = sanitizeAndValidatePrivateKey(hardhatKey);
+            const wallet = new ethers.Wallet(validatedKey);
+            derivedAddress = wallet.address;
+        } catch(e) {
+            throw new Error(e.message || 'Invalid hardhat token format.');
+        }
+
+        if (derivedAddress.toLowerCase() !== profile.blockchain_address.toLowerCase()) {
+            throw new Error('Hardhat token does not match your assigned address.');
+        }
+
+        // Save key to the database
+        const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ hardhat_key: validatedKey })
+            .eq('id', user.id);
+
+        if (updateError) throw new Error('Failed to save hardhat key.');
+
+        res.json({ success: true, message: 'Hardhat key successfully linked to your profile!' });
+    } catch(err) {
+        res.status(400).json({ error: err.message });
     }
 });
 

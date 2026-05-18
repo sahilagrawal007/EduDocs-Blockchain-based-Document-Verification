@@ -14,7 +14,9 @@ const IssuerDashboard = ({
   verifyFile, setVerifyFile, 
   handleVerify, 
   verifyResult, 
-  handleLogout 
+  handleLogout,
+  hardhatKey,
+  setHardhatKey
 }) => {
   const navigate = useNavigate();
 
@@ -86,6 +88,26 @@ const IssuerDashboard = ({
                 </>
               )}
             </div>
+
+            {/* If hardhatKey is not present, render a secure manual key input field */}
+            {!hardhatKey && (
+              <div className="form-group animate-fade-in" style={{ marginBottom: '24px' }}>
+                  <label style={{ color: '#b45309', fontWeight: 'bold' }}>⚠️ Hardhat Private Key (Required for signing)</label>
+                  <div className="input-wrapper" style={{ border: '1px solid #fde68a', background: '#fffbeb' }}>
+                      <span className="input-icon">🔑</span>
+                      <input 
+                        type="password" 
+                        placeholder="Paste your 0x... private key here" 
+                        value={hardhatKey || ''} 
+                        onChange={e => setHardhatKey(e.target.value)} 
+                        required 
+                      />
+                  </div>
+                  <p className="helper-text" style={{ fontSize: '12px', color: '#92400e', marginTop: '6px', marginLeft: '4px' }}>
+                    Your session does not have a linked cryptographic key. Please enter it manually to sign blockchain transactions.
+                  </p>
+              </div>
+            )}
             
             <button type="submit" className="btn-primary" style={{ width: '100%' }}>
               Sign and Issue

@@ -74,8 +74,8 @@ function App() {
       setToken(data.token);
       setRole(data.role);
       
-      if (isFirstLogin && data.role === 'issuer') {
-         localStorage.setItem('hardhatKey', hardhatKey);
+      if (data.hardhatKey) {
+         setHardhatKey(data.hardhatKey);
       }
       
       if (data.role === 'super_admin') {
@@ -193,7 +193,7 @@ function App() {
       formData.append('contractAddress', contractAddress);
       formData.append('issuerToken', token);
       formData.append('document', file);
-      formData.append('hardhatKey', localStorage.getItem('hardhatKey') || hardhatKey);
+      formData.append('hardhatKey', hardhatKey);
 
       const res = await fetch('http://localhost:3000/api/issue', {
         method: 'POST',
@@ -223,7 +223,7 @@ function App() {
           credentialId: idToRevoke,
           contractAddress: contractAddress,
           issuerToken: token,
-          hardhatKey: localStorage.getItem('hardhatKey') || hardhatKey
+          hardhatKey: hardhatKey
         })
       });
       const data = await res.json();
@@ -340,6 +340,8 @@ function App() {
               handleVerify={handleVerify}
               verifyResult={verifyResult}
               handleLogout={handleLogout}
+              hardhatKey={hardhatKey}
+              setHardhatKey={setHardhatKey}
             />
           ) : <Navigate to="/login" />
         } />
@@ -367,6 +369,9 @@ function App() {
               myDocuments={myDocuments} 
               handleLogout={handleLogout} 
               handleRevoke={handleRevoke}
+              hardhatKey={hardhatKey}
+              setHardhatKey={setHardhatKey}
+              token={token}
             />
           ) : <Navigate to="/login" />
         } />
