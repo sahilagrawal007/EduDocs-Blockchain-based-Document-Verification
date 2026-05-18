@@ -6,7 +6,7 @@ import {
     Calendar, TrendingUp
 } from 'lucide-react';
 
-export default function SuperAdminDashboard({ token, handleLogout }) {
+export default function SuperAdminDashboard({ token, handleLogout, showModal }) {
     const [stats, setStats] = useState(null);
     const [organizations, setOrganizations] = useState([]);
     const [newOrgName, setNewOrgName] = useState('');
@@ -30,6 +30,12 @@ export default function SuperAdminDashboard({ token, handleLogout }) {
     const [editEmail, setEditEmail] = useState('');
     const [editPassword, setEditPassword] = useState('');
     const [editRole, setEditRole] = useState('');
+
+    const displayModal = showModal || (async (title, msg, confirmBtn = false) => {
+        if (confirmBtn) return window.confirm(msg);
+        window.alert(msg);
+        return true;
+    });
 
     useEffect(() => {
         if (token) {
@@ -97,15 +103,15 @@ export default function SuperAdminDashboard({ token, handleLogout }) {
                 body: JSON.stringify({ token, name: newOrgName })
             });
             const data = await res.json();
-            if (data.error) alert(data.error);
+            if (data.error) await displayModal('System Notification', data.error);
             else {
-                alert('Organization created!');
+                await displayModal('Success', 'Organization created successfully on the network ledger!');
                 setNewOrgName('');
                 fetchOrganizations();
                 fetchStats();
             }
         } catch (err) {
-            alert('Error creating organization');
+            await displayModal('System Error', 'Failed to configure new SaaS organization tenant.');
         }
     };
 
@@ -137,12 +143,12 @@ export default function SuperAdminDashboard({ token, handleLogout }) {
                 body: JSON.stringify(payload)
             });
             const data = await res.json();
-            if (data.error) alert(data.error);
+            if (data.error) await displayModal('Provisioning Alert', data.error);
             else {
                 if (data.credentials) {
-                    alert(`User Created Successfully!\n\nEmail: ${data.credentials.email}\nPassword: ${data.credentials.password}\nHardhat Key: ${data.credentials.hardhat_key || 'N/A'}`);
+                    await displayModal('Account Generated', `User Created Successfully!\n\nEmail: ${data.credentials.email}\nPassword: ${data.credentials.password}\nHardhat Key: ${data.credentials.hardhat_key || 'N/A'}`);
                 } else {
-                    alert(data.message);
+                    await displayModal('Success', data.message);
                 }
                 setNewAdminEmail('');
                 setNewAdminPassword('');
@@ -150,7 +156,7 @@ export default function SuperAdminDashboard({ token, handleLogout }) {
                 fetchStats();
             }
         } catch (err) {
-            alert('Error creating user');
+            await displayModal('System Error', 'Failed to provision organization user credentials.');
         }
     };
 
@@ -165,19 +171,20 @@ export default function SuperAdminDashboard({ token, handleLogout }) {
                 })
             });
             const data = await res.json();
-            if (data.error) alert(data.error);
+            if (data.error) await displayModal('System Alert', data.error);
             else {
-                alert('User successfully added to organization!');
+                await displayModal('Success', 'User successfully added to organization directory!');
                 fetchOrgDetails(selectedOrg.id);
                 fetchStats();
             }
         } catch (err) {
-            alert('Error assigning user');
+            await displayModal('System Error', 'Failed to map user to tenant organization.');
         }
     };
 
     const handleDeleteUser = async (userId) => {
-        if (!window.confirm("Are you sure you want to delete this user?")) return;
+        const confirmed = await displayModal('Verify Deletion', 'Are you sure you want to permanently delete this user account from the registry?', true);
+        if (!confirmed) return;
         try {
             const res = await fetch(`http://localhost:3000/api/users/${userId}`, {
                 method: 'DELETE',
@@ -185,14 +192,14 @@ export default function SuperAdminDashboard({ token, handleLogout }) {
                 body: JSON.stringify({ masterAdminToken: token })
             });
             const data = await res.json();
-            if (data.error) alert(data.error);
+            if (data.error) await displayModal('System Alert', data.error);
             else {
-                alert(data.message);
+                await displayModal('Success', data.message);
                 fetchOrgDetails(selectedOrg.id);
                 fetchStats();
             }
         } catch (err) {
-            alert('Error deleting user');
+            await displayModal('System Error', 'Failed to delete selected user account.');
         }
     };
 
@@ -224,14 +231,14 @@ export default function SuperAdminDashboard({ token, handleLogout }) {
                 body: JSON.stringify(payload)
             });
             const data = await res.json();
-            if (data.error) alert(data.error);
+            if (data.error) await displayModal('System Alert', data.error);
             else {
-                alert('User details updated successfully!');
+                await displayModal('Success', 'User details updated successfully!');
                 setEditingUser(null);
                 fetchOrgDetails(selectedOrg.id);
             }
         } catch (err) {
-            alert('Error updating user');
+            await displayModal('System Error', 'Failed to update administrative profile.');
         }
     };
 
