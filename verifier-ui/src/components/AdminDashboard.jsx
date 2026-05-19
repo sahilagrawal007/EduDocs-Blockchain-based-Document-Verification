@@ -1,385 +1,243 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Shield, User, Mail, Lock, PlusCircle, Trash2, Key, LogOut, Loader2, 
-  Upload, Download, FileSpreadsheet, Activity, ShieldCheck, CheckCircle2,
-  Users
+import {
+  Shield, User, Mail, Lock, PlusCircle, Trash2, Key, LogOut,
+  Loader2, Upload, Activity, ShieldCheck, Users
 } from 'lucide-react';
+import {
+  PageWrapper, DashHeader, UserBadge, BtnMuted, BtnLogout, BtnPrimary, BtnOutline, BtnRevoke,
+  Card, SectionTitle, SectionSubtitle, Field, inputCls, DropZone,
+  Table, Th, Td, EmptyRow, RecipientAvatar, RoleBadge,
+  SpinLabel, InfoCallout, Badge
+} from './ui';
 
-const AdminDashboard = ({ 
+const AdminDashboard = ({
   newEmail, setNewEmail,
   newPassword, setNewPassword,
   newRole, setNewRole,
   usersList = [],
-  handleCreateUser,
-  handleChangePassword,
-  handleDeleteUser,
-  handleLogout,
-  token,
-  isCreatingUser = false,
-  fetchUsers,
-  showModal
+  handleCreateUser, handleChangePassword, handleDeleteUser,
+  handleLogout, token, isCreatingUser = false,
+  fetchUsers, showModal
 }) => {
   const navigate = useNavigate();
-  const [bulkRole, setBulkRole] = useState('issuer');
-  const [parsedEmails, setParsedEmails] = useState([]);
-  const [importing, setImporting] = useState(false);
-  const [importStatus, setImportStatus] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [bulkRole, setBulkRole]           = useState('issuer');
+  const [parsedEmails, setParsedEmails]   = useState([]);
+  const [importing, setImporting]         = useState(false);
+  const [importStatus, setImportStatus]   = useState('');
+  const [isSubmitting, setIsSubmitting]   = useState(false);
 
-  // Dynamic mount fetch to prevent stale data glitches
   useEffect(() => {
-    if (token && fetchUsers) {
-      fetchUsers(token);
-    }
+    if (token && fetchUsers) fetchUsers(token);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    try {
-      await handleCreateUser(e);
-    } finally {
-      setIsSubmitting(false);
-    }
+  const handleSubmit = async e => {
+    e.preventDefault(); setIsSubmitting(true);
+    try { await handleCreateUser(e); } finally { setIsSubmitting(false); }
   };
 
-  const handleFileUpload = (e) => {
+  const handleFileUpload = e => {
     const file = e.target.files[0];
     if (!file) return;
-
     const reader = new FileReader();
-    reader.onload = (event) => {
-      const content = event.target.result;
-      // Extract all valid emails using regex
-      const matches = content.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/gi) || [];
-      const uniqueEmails = [...new Set(matches.map(email => email.trim().toLowerCase()))];
-      
-      setParsedEmails(uniqueEmails);
-      setImportStatus(`Detected ${uniqueEmails.length} valid email address(es) from your file.`);
+    reader.onload = ev => {
+      const matches = ev.target.result.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/gi) || [];
+      const unique = [...new Set(matches.map(m => m.trim().toLowerCase()))];
+      setParsedEmails(unique);
+      setImportStatus(`Detected ${unique.length} valid email address(es).`);
     };
     reader.readAsText(file);
   };
 
   const handleBulkImport = async () => {
-    if (parsedEmails.length === 0) {
-      if (showModal) {
-        await showModal("Selection Required", "Please select a valid CSV/TXT file with emails first.");
-      } else {
-        alert("Please select a valid CSV/TXT file with emails first.");
-      }
+    if (!parsedEmails.length) {
+      if (showModal) await showModal('Selection Required', 'Please select a valid CSV/TXT with emails.');
+      else alert('Please select a valid CSV/TXT.');
       return;
     }
-
     setImporting(true);
-    setImportStatus("Provisioning user accounts, generating secure passwords, sending welcome emails...");
-
+    setImportStatus('Provisioning accounts, generating passwords, sending welcome emails…');
     try {
       const res = await fetch('http://localhost:3000/api/auth/bulk_create_users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          masterAdminToken: token,
-          emails: parsedEmails,
-          role: bulkRole
-        })
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ masterAdminToken: token, emails: parsedEmails, role: bulkRole })
       });
-
       const data = await res.json();
-      if (data.error) {
-        setImportStatus(`Import Error: ${data.error}`);
-      } else {
+      if (data.error) setImportStatus(`Import Error: ${data.error}`);
+      else {
         setImportStatus(data.message);
-        if (showModal) {
-          await showModal("Bulk Import Completed", data.message);
-        } else {
-          alert(data.message);
-        }
-        if (fetchUsers) {
-          fetchUsers(token);
-        }
+        if (showModal) await showModal('Bulk Import Completed', data.message);
+        if (fetchUsers) fetchUsers(token);
       }
-    } catch (err) {
-      setImportStatus("Network error during bulk import.");
-    } finally {
-      setImporting(false);
-    }
+    } catch { setImportStatus('Network error during bulk import.'); }
+    finally { setImporting(false); }
   };
 
   const downloadSampleCSV = () => {
-    const csvContent = "data:text/csv;charset=utf-8,Emails\r\nstudent1@university.edu\r\nstudent2@university.edu\r\nstudent3@university.edu\r\n";
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "edudocs_bulk_import_sample.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const csv = "data:text/csv;charset=utf-8,Emails\r\nstudent1@university.edu\r\nstudent2@university.edu\r\n";
+    const a = document.createElement('a');
+    a.href = encodeURI(csv); a.download = 'edudocs_bulk_import_sample.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
   };
 
+  const busy = isSubmitting || isCreatingUser;
+
   return (
-    <div className="dashboard-container">
-      <header className="dashboard-header animate-slide-down">
-        <div className="header-brand">
-          <div className="header-logo">
-            <Shield size={22} className="logo-svg" />
-          </div>
-          <h1>EduDocs</h1>
-        </div>
-        <div className="header-actions">
-          <div className="user-badge" style={{ cursor: 'pointer' }} onClick={() => navigate('/profile')}>
-            <div className="avatar-sm">
-              <User size={14} />
-            </div>
-            <span>Master Admin</span>
-          </div>
-          <button onClick={() => navigate('/profile')} className="btn-primary-muted">
-            My Profile
-          </button>
-          <button onClick={handleLogout} className="btn-logout">
-            <LogOut size={14} style={{ marginRight: '6px' }} />
-            Sign Out
-          </button>
-        </div>
-      </header>
-      
-      <div className="dashboard-layout grid-2-col">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          {/* Manual User Creation */}
-          <section className="dashboard-section card-white animate-fade-in">
-            <h2>Provision Single Account</h2>
-            <p className="section-subtitle">Add new credentials or administrative operators to the network manually.</p>
-            
-            <form onSubmit={handleSubmit} className="dashboard-form">
-              <div className="form-group">
-                <label>Institutional Email Address</label>
-                <div className="input-wrapper">
-                  <span className="input-icon">
-                    <Mail size={16} />
-                  </span>
-                  <input 
-                    type="email" 
-                    placeholder="operator@university.edu" 
-                    value={newEmail} 
-                    onChange={e => setNewEmail(e.target.value)} 
-                    required 
-                    disabled={isSubmitting || isCreatingUser}
-                  />
-                </div>
-              </div>
-              
-              <div className="form-group">
-                <label>Temporary Secure Password</label>
-                <div className="input-wrapper">
-                  <span className="input-icon">
-                    <Lock size={16} />
-                  </span>
-                  <input 
-                    type="password" 
-                    placeholder="••••••••" 
-                    value={newPassword} 
-                    onChange={e => setNewPassword(e.target.value)} 
-                    required 
-                    disabled={isSubmitting || isCreatingUser}
-                  />
-                </div>
-              </div>
-              
-              <div className="form-group">
-                <label>Access Privilege Role</label>
-                <div className="input-wrapper">
-                  <span className="input-icon" style={{ zIndex: 1 }}>
-                    <User size={16} />
-                  </span>
-                  <select 
-                    value={newRole} 
-                    onChange={e => setNewRole(e.target.value)}
-                    disabled={isSubmitting || isCreatingUser}
-                    className="modern-select"
-                  >
-                    <option value="issuer">Document Issuer Authority</option>
-                    <option value="normal_user">Standard Student / Verifier</option>
-                  </select>
-                </div>
-              </div>
-              
-              <button type="submit" className="btn-primary" style={{ width: '100%', marginTop: '8px' }} disabled={isSubmitting || isCreatingUser}>
-                {(isSubmitting || isCreatingUser) ? (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                    <Loader2 className="animate-spin" size={18} />
-                    <span>Provisioning User...</span>
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                    <PlusCircle size={16} />
-                    <span>Generate Platform Account</span>
-                  </div>
-                )}
-              </button>
+    <PageWrapper>
+      <DashHeader logo={<Shield size={20} />} title="EduDocs">
+        <UserBadge icon={<User size={12} />} label="Master Admin" />
+        <BtnMuted onClick={() => navigate('/profile')}>My Profile</BtnMuted>
+        <BtnLogout onClick={handleLogout}><LogOut size={14} /> Sign Out</BtnLogout>
+      </DashHeader>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-7">
+        {/* Left column: Create + Bulk Import */}
+        <div className="flex flex-col gap-7">
+
+          {/* Manual create */}
+          <Card className="animate-fade-in">
+            <SectionTitle>Provision Single Account</SectionTitle>
+            <SectionSubtitle>Add new credentials or administrative operators to the network manually.</SectionSubtitle>
+
+            <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+              <Field label="Institutional Email" icon={<Mail size={15} />}>
+                <input type="email" placeholder="operator@university.edu"
+                  value={newEmail} onChange={e => setNewEmail(e.target.value)}
+                  required disabled={busy} className={inputCls()} />
+              </Field>
+
+              <Field label="Temporary Password" icon={<Lock size={15} />}>
+                <input type="password" placeholder="••••••••"
+                  value={newPassword} onChange={e => setNewPassword(e.target.value)}
+                  required disabled={busy} className={inputCls()} />
+              </Field>
+
+              <Field label="Access Role" icon={<User size={15} />}>
+                <select value={newRole} onChange={e => setNewRole(e.target.value)}
+                  disabled={busy} className={inputCls()}>
+                  <option value="issuer">Document Issuer Authority</option>
+                  <option value="normal_user">Standard Student / Verifier</option>
+                </select>
+              </Field>
+
+              <BtnPrimary type="submit" disabled={busy} className="w-full mt-1">
+                {busy
+                  ? <SpinLabel label="Provisioning User…" />
+                  : <><PlusCircle size={15} /> Generate Platform Account</>
+                }
+              </BtnPrimary>
             </form>
-          </section>
+          </Card>
 
-          {/* Bulk Import Section */}
-          <section className="dashboard-section card-white animate-fade-in delay-1">
-            <h2>Bulk Import Credentials (.csv / .txt)</h2>
-            <p className="section-subtitle">
-              Upload a list of academic emails exported from your SIS. The platform automatically sets up accounts, configures keys, and dispatches credential setup payloads. You can download a{' '}
-              <span 
-                onClick={downloadSampleCSV} 
-                className="link-anchor"
-                style={{ fontWeight: '700', textDecoration: 'underline', cursor: 'pointer' }}
-              >
-                Sample Template File Here
-              </span>.
-            </p>
-            
-            <div className="dashboard-form">
-              <div className="form-group">
-                <label>Assigned Privilege for Imported Batch</label>
-                <div className="input-wrapper">
-                  <span className="input-icon" style={{ zIndex: 1 }}>
-                    <Users size={16} />
-                  </span>
-                  <select 
-                    value={bulkRole} 
-                    onChange={e => setBulkRole(e.target.value)}
-                    className="modern-select"
-                    disabled={importing}
-                  >
-                    <option value="issuer">Document Issuer Authority</option>
-                    <option value="normal_user">Standard Student / Verifier</option>
-                  </select>
-                </div>
-              </div>
+          {/* Bulk Import */}
+          <Card className="animate-fade-in delay-100">
+            <SectionTitle>Bulk Import Credentials</SectionTitle>
+            <SectionSubtitle>
+              Upload a CSV of academic emails. The platform auto-creates accounts and dispatches credentials.{' '}
+              <button onClick={downloadSampleCSV}
+                className="text-indigo-600 font-semibold underline cursor-pointer hover:text-indigo-800">
+                Download sample template
+              </button>.
+            </SectionSubtitle>
 
-              <div className="form-group">
-                <label>Batch Email Registry File</label>
-                <div className="drop-zone mini" style={{ padding: '16px', background: 'var(--input-bg)' }}>
-                  <input 
-                    type="file" 
-                    accept=".csv,.txt"
-                    onChange={handleFileUpload}
-                    disabled={importing}
-                  />
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'center' }}>
-                    <Upload size={18} className="text-secondary" />
-                    <span className="drop-zone-text" style={{ fontSize: '13px' }}>Select .CSV or .TXT registry</span>
-                  </div>
-                </div>
+            <div className="flex flex-col gap-5">
+              <Field label="Assigned Role for Batch" icon={<Users size={15} />}>
+                <select value={bulkRole} onChange={e => setBulkRole(e.target.value)}
+                  disabled={importing} className={inputCls()}>
+                  <option value="issuer">Document Issuer Authority</option>
+                  <option value="normal_user">Standard Student / Verifier</option>
+                </select>
+              </Field>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-widest">
+                  Batch Email Registry File
+                </label>
+                <DropZone mini accept=".csv,.txt" onChange={handleFileUpload} disabled={importing}>
+                  <Upload size={18} className="text-indigo-500" />
+                  <span className="text-sm font-semibold text-slate-600">Select .CSV or .TXT registry</span>
+                </DropZone>
               </div>
 
               {importStatus && (
-                <div className="info-callout">
-                  <Activity size={14} style={{ marginRight: '6px' }} />
-                  <span>{importStatus}</span>
-                </div>
+                <InfoCallout>
+                  <Activity size={14} className="shrink-0 mt-0.5" />
+                  {importStatus}
+                </InfoCallout>
               )}
 
               {parsedEmails.length > 0 && (
-                <div style={{ marginTop: '16px' }}>
-                  <button 
-                    type="button" 
-                    onClick={handleBulkImport} 
-                    className="btn-primary" 
-                    disabled={importing}
-                    style={{ width: '100%', background: '#10b981', borderColor: '#10b981' }}
-                  >
-                    {importing ? (
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                        <Loader2 className="animate-spin" size={18} />
-                        <span>Anchoring Batch Accounts...</span>
-                      </div>
-                    ) : (
-                      <span>Import {parsedEmails.length} Users Now</span>
-                    )}
-                  </button>
-                </div>
+                <BtnPrimary onClick={handleBulkImport} disabled={importing}
+                  className="w-full !bg-emerald-600 hover:!bg-emerald-700 !shadow-[0_4px_14px_-1px_rgba(16,185,129,0.3)]">
+                  {importing
+                    ? <SpinLabel label="Anchoring Batch Accounts…" />
+                    : `Import ${parsedEmails.length} Users Now`}
+                </BtnPrimary>
               )}
             </div>
-          </section>
+          </Card>
         </div>
 
-        {/* Managed Users directory */}
-        <section className="dashboard-section card-white delay-2 animate-fade-in">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <h2>Managed Directory</h2>
-            <span className="status-badge success">{usersList ? usersList.length : 0} Active Operators</span>
-          </div>
-          <p className="section-subtitle">Browse all credentials, verify blockchain activity status, reset passwords, or suspend access keys.</p>
-          
-          <div className="table-container" style={{ maxHeight: '680px', overflowY: 'auto' }}>
-            <table className="modern-table">
+        {/* Right column: Managed Directory */}
+        <Card className="animate-fade-in delay-200">
+          <SectionTitle badge={<Badge variant="success">{usersList.length} Active Operators</Badge>}>
+            Managed Directory
+          </SectionTitle>
+          <SectionSubtitle>Browse all credentials, reset passwords, or suspend access keys.</SectionSubtitle>
+
+          <div className="max-h-[680px] overflow-y-auto rounded-xl">
+            <Table>
               <thead>
                 <tr>
-                  <th>Identity / Email</th>
-                  <th>Privilege</th>
-                  <th>Status</th>
-                  <th style={{ textAlign: 'center' }}>Key Operations</th>
+                  <Th>Identity / Email</Th>
+                  <Th>Privilege</Th>
+                  <Th>Status</Th>
+                  <Th center>Operations</Th>
                 </tr>
               </thead>
               <tbody>
-                {(!usersList || usersList.length === 0) ? (
-                  <tr>
-                    <td colSpan="4" className="empty-state-cell">
-                      No managed operator profiles in directory.
-                    </td>
+                {usersList.length === 0 ? (
+                  <EmptyRow cols={4} message="No managed operator profiles in directory." />
+                ) : usersList.map((u, i) => (
+                  <tr key={i} className="hover:bg-slate-50/70 transition">
+                    <Td>
+                      <div className="flex items-center gap-3">
+                        <RecipientAvatar
+                          icon={u.email?.[0]?.toUpperCase() ?? '?'}
+                          bgCls="bg-slate-100 text-slate-600"
+                        />
+                        <span className="font-medium text-slate-800">{u.email || 'Operator Account'}</span>
+                      </div>
+                    </Td>
+                    <Td><RoleBadge role={u.role} /></Td>
+                    <Td>
+                      <span className="flex items-center gap-1.5 text-emerald-600 text-xs font-semibold">
+                        <ShieldCheck size={13} /> Secured
+                      </span>
+                    </Td>
+                    <Td center>
+                      {u.role !== 'master_admin' ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <BtnOutline onClick={() => handleChangePassword(u.id)} title="Reset Password">
+                            <Key size={14} />
+                          </BtnOutline>
+                          <BtnRevoke onClick={() => handleDeleteUser(u.id)} title="De-authenticate User">
+                            <Trash2 size={14} />
+                          </BtnRevoke>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-400">System Root</span>
+                      )}
+                    </Td>
                   </tr>
-                ) : (
-                  usersList.map((u, i) => (
-                    <tr key={i} className="table-row">
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <div className="recipient-avatar" style={{ background: '#f1f5f9', color: '#475569' }}>
-                            {u.email && u.email[0] ? u.email[0].toUpperCase() : '?'}
-                          </div>
-                          <span style={{ fontWeight: '500' }}>{u.email || 'Operator Account'}</span>
-                        </div>
-                      </td>
-                      <td>
-                        <span className={`role-badge ${u.role}`}>
-                          {u.role === 'master_admin' ? 'Master Admin' : u.role === 'issuer' ? 'Issuer' : 'Verifier'}
-                        </span>
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <ShieldCheck size={14} className="text-success" />
-                          <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Secured</span>
-                        </div>
-                      </td>
-                      <td style={{ textAlign: 'center' }}>
-                        {u.role !== 'master_admin' ? (
-                          <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                            <button 
-                              onClick={() => handleChangePassword(u.id)}
-                              className="btn-action-outline"
-                              title="Update Password"
-                            >
-                              <Key size={12} style={{ marginRight: '4px' }} />
-                              Reset Pass
-                            </button>
-                            <button 
-                              onClick={() => handleDeleteUser(u.id)}
-                              className="btn-revoke"
-                              title="Suspend Operations"
-                            >
-                              <Trash2 size={12} style={{ marginRight: '4px' }} />
-                              De-auth
-                            </button>
-                          </div>
-                        ) : (
-                          <span style={{ color: '#64748b', fontSize: '12px' }}>System Root</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                )}
+                ))}
               </tbody>
-            </table>
+            </Table>
           </div>
-        </section>
+        </Card>
       </div>
-    </div>
+    </PageWrapper>
   );
 };
 

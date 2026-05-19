@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
     Users, Building, FileText, Activity, 
     PlusCircle, Trash2, Shield, Settings,
     BarChart3, PieChart, ArrowLeft, Edit3, Check, X,
-    Calendar, TrendingUp
+    Calendar, TrendingUp, User, LogOut
 } from 'lucide-react';
+import { PageWrapper, DashHeader, Card, BtnPrimary, Table, RoleBadge, UserBadge, BtnLogout, Badge, BtnMuted } from './ui';
 
 export default function SuperAdminDashboard({ token, handleLogout, showModal }) {
+    const navigate = useNavigate();
     const [stats, setStats] = useState(null);
     const [organizations, setOrganizations] = useState([]);
     const [newOrgName, setNewOrgName] = useState('');
@@ -243,474 +246,449 @@ export default function SuperAdminDashboard({ token, handleLogout, showModal }) 
     };
 
     return (
-        <div className="dashboard-layout super-admin-theme animate-pop-in">
-            {/* Sidebar */}
-            <aside className="sidebar premium-glass">
-                <div className="sidebar-header">
-                    <Shield className="brand-icon pulse-animation" />
-                    <h2>EduDocs Core</h2>
-                    <span className="badge-super">SUPER ADMIN</span>
-                </div>
-                
-                <nav className="sidebar-nav">
-                    <button 
-                        className={`nav-item ${activeTab === 'analytics' ? 'active' : ''}`}
-                        onClick={() => { setActiveTab('analytics'); setSelectedOrg(null); }}
-                    >
-                        <Activity size={20} />
-                        System Analytics
-                    </button>
-                    <button 
-                        className={`nav-item ${activeTab === 'organizations' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('organizations')}
-                    >
-                        <Building size={20} />
-                        Organizations (SaaS)
-                    </button>
-                </nav>
-                
-                <div className="sidebar-footer">
-                    <button className="btn-logout modern-btn outline" onClick={handleLogout}>
-                        Sign Out Core
-                    </button>
-                </div>
-            </aside>
+        <PageWrapper>
+            <DashHeader logo={<Shield size={20} />} title="EduDocs Core">
+                <UserBadge icon={<User size={12} />} label="Super Admin" />
+                <BtnMuted onClick={() => navigate('/profile')}>My Profile</BtnMuted>
+                <BtnLogout onClick={handleLogout}><LogOut size={14} /> Sign Out</BtnLogout>
+            </DashHeader>
+            
+            <div className="flex gap-4 mb-8 border-b border-slate-200 pb-4">
+                <button 
+                    onClick={() => { setActiveTab('analytics'); setSelectedOrg(null); }}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'analytics' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-100'}`}
+                >
+                    <Activity size={18} /> System Analytics
+                </button>
+                <button 
+                    onClick={() => setActiveTab('organizations')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'organizations' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-100'}`}
+                >
+                    <Building size={18} /> Organizations (SaaS)
+                </button>
+            </div>
 
-            {/* Main Content */}
-            <main className="main-content">
-                {!selectedOrg ? (
-                    <>
-                        <header className="topbar">
-                            <h1>Super Admin Control Center</h1>
-                            <p className="subtitle">Global visibility and tenant management</p>
-                        </header>
+            {!selectedOrg ? (
+                <>
 
-                        <div className="content-area scroll-fade">
+                    {activeTab === 'analytics' && stats && (
+                        <div className="space-y-6 fade-in-up">
+                            <div className="flex items-center gap-2 mb-4">
+                                <BarChart3 className="text-indigo-600" size={24} />
+                                <h2 className="font-heading text-xl font-bold text-slate-800">Global System Overview</h2>
+                            </div>
                             
-                            {activeTab === 'analytics' && stats && (
-                                <div className="analytics-view fade-in-up">
-                                    <h2 className="section-title"><BarChart3 className="icon" /> Global System Overview</h2>
-                                    
-                                    <div className="stats-grid premium">
-                                        <div className="stat-card glass-panel orange-glow">
-                                            <Building className="stat-icon" />
-                                            <div className="stat-info">
-                                                <h3>Total Organizations</h3>
-                                                <p className="stat-number">{stats.totalOrganizations}</p>
-                                            </div>
-                                        </div>
-                                        
-                                        <div className="stat-card glass-panel purple-glow">
-                                            <Shield className="stat-icon" />
-                                            <div className="stat-info">
-                                                <h3>Master Admins</h3>
-                                                <p className="stat-number">{stats.totalMasterAdmins}</p>
-                                            </div>
-                                        </div>
-                                        
-                                        <div className="stat-card glass-panel blue-glow">
-                                            <Users className="stat-icon" />
-                                            <div className="stat-info">
-                                                <h3>Active Issuers</h3>
-                                                <p className="stat-number">{stats.totalIssuers}</p>
-                                            </div>
-                                        </div>
-                                        
-                                        <div className="stat-card glass-panel green-glow">
-                                            <FileText className="stat-icon" />
-                                            <div className="stat-info">
-                                                <h3>Total Documents</h3>
-                                                <p className="stat-number">{stats.totalDocuments}</p>
-                                            </div>
-                                        </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                                <Card className="border-t-4 border-t-orange-500 hover:shadow-lg transition flex items-center p-5">
+                                    <div className="bg-orange-50 text-orange-600 p-4 rounded-2xl mr-4">
+                                        <Building size={28} />
                                     </div>
-                                    
-                                    {/* Combined Tenant Comparison Graph */}
-                                    <div className="combined-analytics glass-panel mt-3">
-                                        <h3><Building className="icon" /> Combined Tenant Comparison (Documents Issued)</h3>
-                                        <p className="help-text">Comparative analysis of decentralized documents issued by each registered SaaS tenant.</p>
-                                        {stats.organizationsBreakdown && stats.organizationsBreakdown.length > 0 ? (
-                                            <div className="tenant-comparison-chart mt-3">
-                                                {stats.organizationsBreakdown.map(org => {
-                                                    const percent = stats.totalDocuments > 0 ? (org.documentsCount / stats.totalDocuments) * 100 : 0;
-                                                    return (
-                                                        <div key={org.id} className="comparison-row">
-                                                            <div className="comparison-label">
-                                                                <span className="org-name">{org.name}</span>
-                                                                <span className="org-value">{org.documentsCount} docs ({percent.toFixed(1)}%)</span>
-                                                            </div>
-                                                            <div className="comparison-bar-container">
-                                                                <div 
-                                                                    className="comparison-bar" 
-                                                                    style={{ width: `${Math.max(percent, 2)}%` }}
-                                                                ></div>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        ) : (
-                                            <p className="empty-state">No tenant comparative data available.</p>
-                                        )}
+                                    <div>
+                                        <h3 className="text-slate-500 text-sm font-semibold uppercase tracking-wider mb-1">Total Organizations</h3>
+                                        <p className="font-heading text-3xl font-bold text-slate-800">{stats.totalOrganizations}</p>
                                     </div>
-
-                                    {/* Platform Role Breakdown & Activity Wave */}
-                                    <div className="split-view mt-3">
-                                        <div className="glass-panel" style={{ flex: 1.2 }}>
-                                            <h3><Users className="icon" /> Platform Role Allocation</h3>
-                                            <p className="help-text">Distribution of active accounts globally mapped across all organizations.</p>
-                                            <div className="role-distribution mt-3">
-                                                <div className="role-progress-bar">
-                                                    <div 
-                                                        className="role-segment super-admin-segment" 
-                                                        style={{ width: `${(stats.totalMasterAdmins / (stats.totalMasterAdmins + stats.totalIssuers + stats.totalUsers || 1)) * 100}%` }}
-                                                        title="Master Admins"
-                                                    ></div>
-                                                    <div 
-                                                        className="role-segment issuer-segment" 
-                                                        style={{ width: `${(stats.totalIssuers / (stats.totalMasterAdmins + stats.totalIssuers + stats.totalUsers || 1)) * 100}%` }}
-                                                        title="Issuers"
-                                                    ></div>
-                                                    <div 
-                                                        className="role-segment user-segment" 
-                                                        style={{ width: `${(stats.totalUsers / (stats.totalMasterAdmins + stats.totalIssuers + stats.totalUsers || 1)) * 100}%` }}
-                                                        title="Users"
-                                                    ></div>
-                                                </div>
-                                                <div className="role-legend mt-3">
-                                                    <div className="legend-item"><span className="dot ma"></span> Master Admins ({stats.totalMasterAdmins})</div>
-                                                    <div className="legend-item"><span className="dot issuer"></span> Active Issuers ({stats.totalIssuers})</div>
-                                                    <div className="legend-item"><span className="dot user"></span> Verifiers / Users ({stats.totalUsers})</div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="glass-panel" style={{ flex: 0.8 }}>
-                                            <h3><Activity className="icon" /> Network Sync Status</h3>
-                                            <p className="help-text">Live check of block sync and API response integrity.</p>
-                                            <div className="glowing-sine-wave-container mt-3">
-                                                <div className="pulse-circle"></div>
-                                                <span className="pulse-text">Sync: Node Active</span>
-                                            </div>
-                                        </div>
+                                </Card>
+                                
+                                <Card className="border-t-4 border-t-purple-500 hover:shadow-lg transition flex items-center p-5">
+                                    <div className="bg-purple-50 text-purple-600 p-4 rounded-2xl mr-4">
+                                        <Shield size={28} />
                                     </div>
+                                    <div>
+                                        <h3 className="text-slate-500 text-sm font-semibold uppercase tracking-wider mb-1">Master Admins</h3>
+                                        <p className="font-heading text-3xl font-bold text-slate-800">{stats.totalMasterAdmins}</p>
+                                    </div>
+                                </Card>
+                                
+                                <Card className="border-t-4 border-t-blue-500 hover:shadow-lg transition flex items-center p-5">
+                                    <div className="bg-blue-50 text-blue-600 p-4 rounded-2xl mr-4">
+                                        <Users size={28} />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-slate-500 text-sm font-semibold uppercase tracking-wider mb-1">Active Issuers</h3>
+                                        <p className="font-heading text-3xl font-bold text-slate-800">{stats.totalIssuers}</p>
+                                    </div>
+                                </Card>
+                                
+                                <Card className="border-t-4 border-t-green-500 hover:shadow-lg transition flex items-center p-5">
+                                    <div className="bg-green-50 text-green-600 p-4 rounded-2xl mr-4">
+                                        <FileText size={28} />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-slate-500 text-sm font-semibold uppercase tracking-wider mb-1">Total Documents</h3>
+                                        <p className="font-heading text-3xl font-bold text-slate-800">{stats.totalDocuments}</p>
+                                    </div>
+                                </Card>
+                            </div>
+                            
+                            <Card className="mt-6">
+                                <div className="mb-6">
+                                    <h3 className="flex items-center gap-2 font-heading text-lg font-bold text-slate-800">
+                                        <Building className="text-indigo-600" /> Combined Tenant Comparison (Documents Issued)
+                                    </h3>
+                                    <p className="text-sm text-slate-500 mt-1">Comparative analysis of decentralized documents issued by each registered SaaS tenant.</p>
                                 </div>
-                            )}
-
-                            {activeTab === 'organizations' && (
-                                <div className="organizations-view fade-in-up">
-                                    <div className="split-view">
-                                        <div className="form-section glass-panel">
-                                            <h2 className="section-title"><PlusCircle className="icon" /> New SaaS Tenant</h2>
-                                            <form onSubmit={handleCreateOrganization} className="modern-form">
-                                                <div className="form-group">
-                                                    <label>Organization / University Name</label>
-                                                    <input 
-                                                        type="text" 
-                                                        placeholder="e.g. Stanford University"
-                                                        value={newOrgName}
-                                                        onChange={(e) => setNewOrgName(e.target.value)}
-                                                        required 
-                                                    />
-                                                </div>
-                                                <button type="submit" className="modern-btn primary full-width">
-                                                    Create Organization
-                                                </button>
-                                            </form>
-                                        </div>
-                                        
-                                        <div className="list-section glass-panel">
-                                            <h2 className="section-title">Active Organizations</h2>
-                                            <p className="help-text">Click on any organization to manage its users and view its specific analytics.</p>
-                                            <div className="tenant-list">
-                                                {organizations.length === 0 ? (
-                                                    <p className="empty-state">No organizations created yet.</p>
-                                                ) : (
-                                                    organizations.map(org => (
+                                {stats.organizationsBreakdown && stats.organizationsBreakdown.length > 0 ? (
+                                    <div className="space-y-4">
+                                        {stats.organizationsBreakdown.map(org => {
+                                            const percent = stats.totalDocuments > 0 ? (org.documentsCount / stats.totalDocuments) * 100 : 0;
+                                            return (
+                                                <div key={org.id} className="w-full">
+                                                    <div className="flex justify-between items-center mb-1 text-sm">
+                                                        <span className="font-semibold text-slate-700">{org.name}</span>
+                                                        <span className="text-slate-500 font-medium">{org.documentsCount} docs ({percent.toFixed(1)}%)</span>
+                                                    </div>
+                                                    <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
                                                         <div 
-                                                            key={org.id} 
-                                                            className="tenant-card clickable-card"
-                                                            onClick={() => setSelectedOrg(org)}
-                                                            style={{ cursor: 'pointer' }}
-                                                        >
-                                                            <div className="tenant-icon">{org.name.charAt(0)}</div>
-                                                            <div className="tenant-details">
-                                                                <h4>{org.name}</h4>
-                                                                <span className="tenant-id">ID: {org.id.slice(0, 8)}...</span>
-                                                            </div>
-                                                        </div>
-                                                    ))
-                                                )}
-                                            </div>
+                                                            className="bg-indigo-600 h-full rounded-full transition-all duration-1000" 
+                                                            style={{ width: `${Math.max(percent, 2)}%` }}
+                                                        ></div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <p className="text-slate-500 italic py-4 text-center">No tenant comparative data available.</p>
+                                )}
+                            </Card>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+                                <Card>
+                                    <div className="mb-6">
+                                        <h3 className="flex items-center gap-2 font-heading text-lg font-bold text-slate-800">
+                                            <Users className="text-indigo-600" /> Platform Role Allocation
+                                        </h3>
+                                        <p className="text-sm text-slate-500 mt-1">Distribution of active accounts globally mapped across all organizations.</p>
+                                    </div>
+                                    <div className="space-y-4">
+                                        <div className="w-full h-4 rounded-full flex overflow-hidden">
+                                            <div 
+                                                className="bg-indigo-600 h-full" 
+                                                style={{ width: `${(stats.totalMasterAdmins / (stats.totalMasterAdmins + stats.totalIssuers + stats.totalUsers || 1)) * 100}%` }}
+                                                title="Master Admins"
+                                            ></div>
+                                            <div 
+                                                className="bg-sky-400 h-full" 
+                                                style={{ width: `${(stats.totalIssuers / (stats.totalMasterAdmins + stats.totalIssuers + stats.totalUsers || 1)) * 100}%` }}
+                                                title="Issuers"
+                                            ></div>
+                                            <div 
+                                                className="bg-emerald-400 h-full" 
+                                                style={{ width: `${(stats.totalUsers / (stats.totalMasterAdmins + stats.totalIssuers + stats.totalUsers || 1)) * 100}%` }}
+                                                title="Users"
+                                            ></div>
+                                        </div>
+                                        <div className="flex gap-4 text-sm font-medium text-slate-600 flex-wrap">
+                                            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-indigo-600"></div> Master Admins ({stats.totalMasterAdmins})</div>
+                                            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-sky-400"></div> Active Issuers ({stats.totalIssuers})</div>
+                                            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-emerald-400"></div> Verifiers / Users ({stats.totalUsers})</div>
                                         </div>
                                     </div>
-                                </div>
-                            )}
+                                </Card>
+
+                                <Card>
+                                    <div className="mb-6">
+                                        <h3 className="flex items-center gap-2 font-heading text-lg font-bold text-slate-800">
+                                            <Activity className="text-indigo-600" /> Network Sync Status
+                                        </h3>
+                                        <p className="text-sm text-slate-500 mt-1">Live check of block sync and API response integrity.</p>
+                                    </div>
+                                    <div className="flex items-center gap-4 bg-emerald-50 text-emerald-700 p-6 rounded-2xl border border-emerald-100 mt-4">
+                                        <div className="relative flex h-4 w-4">
+                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                            <span className="relative inline-flex rounded-full h-4 w-4 bg-emerald-500"></span>
+                                        </div>
+                                        <span className="font-bold tracking-wide">Sync: Node Active</span>
+                                    </div>
+                                </Card>
+                            </div>
                         </div>
-                    </>
-                ) : (
-                    // Organization Detail View (Drill down)
-                    <div className="org-detail-view fade-in-up">
-                        <header className="topbar flex-row-align">
-                            <button className="back-btn" onClick={() => setSelectedOrg(null)}>
-                                <ArrowLeft size={20} />
-                                Back to Organizations
-                            </button>
-                            <div className="org-header-info">
-                                <h1>{selectedOrg.name}</h1>
-                                <span className="badge-org-id">Tenant ID: {selectedOrg.id}</span>
-                            </div>
-                        </header>
+                    )}
 
-                        {orgStats && (
-                            <>
-                                <div className="stats-grid premium mt-2">
-                                    <div className="stat-card glass-panel purple-glow">
-                                        <Shield className="stat-icon" />
-                                        <div className="stat-info">
-                                            <h3>Master Admins</h3>
-                                            <p className="stat-number">{orgStats.totalMasterAdmins}</p>
-                                        </div>
+                    {activeTab === 'organizations' && (
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 fade-in-up">
+                            <Card className="lg:col-span-1 h-fit">
+                                <h2 className="flex items-center gap-2 font-heading text-xl font-bold text-slate-800 mb-6">
+                                    <PlusCircle className="text-indigo-600" /> New SaaS Tenant
+                                </h2>
+                                <form onSubmit={handleCreateOrganization} className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-semibold text-slate-700 mb-2">Organization / University Name</label>
+                                        <input 
+                                            type="text" 
+                                            placeholder="e.g. Stanford University"
+                                            value={newOrgName}
+                                            onChange={(e) => setNewOrgName(e.target.value)}
+                                            required 
+                                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all outline-none"
+                                        />
                                     </div>
-                                    <div className="stat-card glass-panel blue-glow">
-                                        <Users className="stat-icon" />
-                                        <div className="stat-info">
-                                            <h3>Active Issuers</h3>
-                                            <p className="stat-number">{orgStats.totalIssuers}</p>
-                                        </div>
-                                    </div>
-                                    <div className="stat-card glass-panel green-glow">
-                                        <FileText className="stat-icon" />
-                                        <div className="stat-info">
-                                            <h3>Documents Issued</h3>
-                                            <p className="stat-number">{orgStats.totalDocuments}</p>
-                                        </div>
-                                    </div>
+                                    <BtnPrimary className="w-full justify-center">Create Organization</BtnPrimary>
+                                </form>
+                            </Card>
+                            
+                            <Card className="lg:col-span-2">
+                                <div className="mb-6">
+                                    <h2 className="font-heading text-xl font-bold text-slate-800">Active Organizations</h2>
+                                    <p className="text-sm text-slate-500 mt-1">Click on any organization to manage its users and view its specific analytics.</p>
                                 </div>
-
-                                {/* Individual Organization Weekly Issuance Trend Graph */}
-                                {orgStats.activityTrend && (
-                                    <div className="glass-panel mt-3">
-                                        <h3><Calendar className="icon" /> Individual Document Issuance Trend (Last 7 Days)</h3>
-                                        <p className="help-text">Visual analysis of document activities strictly related to this tenant over the past week.</p>
-                                        <div className="org-trend-chart mt-3">
-                                            {orgStats.activityTrend.map((t, idx) => {
-                                                const maxVal = Math.max(...orgStats.activityTrend.map(x => x.count), 1);
-                                                const heightPercent = (t.count / maxVal) * 100;
-                                                return (
-                                                    <div key={idx} className="trend-bar-wrapper">
-                                                        <div className="trend-bar-container">
-                                                            <div 
-                                                                className="trend-bar" 
-                                                                style={{ height: `${Math.max(heightPercent, 5)}%` }}
-                                                                title={`${t.count} documents`}
-                                                            >
-                                                                {t.count > 0 && <span className="trend-bar-value">{t.count}</span>}
-                                                            </div>
-                                                        </div>
-                                                        <span className="trend-bar-label">{t.date}</span>
-                                                    </div>
-                                                );
-                                            })}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    {organizations.length === 0 ? (
+                                        <div className="col-span-full py-8 text-center text-slate-500 italic bg-slate-50 rounded-2xl border border-slate-100">
+                                            No organizations created yet.
                                         </div>
-                                    </div>
-                                )}
-                            </>
-                        )}
-
-                        <div className="split-view mt-4">
-                            {/* Left column: Provisioning, Assigning & Resource Structure */}
-                            <div className="form-section flex-col-gap">
-                                {/* Provision User form directly inside Organization context */}
-                                <div className="glass-panel">
-                                    <h2 className="section-title"><PlusCircle className="icon" /> Provision User</h2>
-                                    <p className="help-text">Directly add a new administrator, issuer, or user to this organization.</p>
-                                    <form onSubmit={handleCreateOrgUser} className="modern-form">
-                                        <div className="form-group">
-                                            <label>User Role</label>
-                                            <select 
-                                                value={newAdminRole}
-                                                onChange={(e) => setNewAdminRole(e.target.value)}
-                                                required
-                                            >
-                                                <option value="master_admin">Master Admin</option>
-                                                <option value="issuer">Issuer (Blockchain Wallet)</option>
-                                                <option value="user">Standard User (Verifier)</option>
-                                            </select>
-                                        </div>
-                                        <div className="form-group">
-                                            <label>Email Address</label>
-                                            <input 
-                                                type="email" 
-                                                placeholder="user@university.edu"
-                                                value={newAdminEmail}
-                                                onChange={(e) => setNewAdminEmail(e.target.value)}
-                                                required 
-                                            />
-                                        </div>
-                                        <div className="form-group">
-                                            <label>Secure Password</label>
-                                            <input 
-                                                type="password" 
-                                                placeholder="Min 6 characters"
-                                                value={newAdminPassword}
-                                                onChange={(e) => setNewAdminPassword(e.target.value)}
-                                                required 
-                                            />
-                                        </div>
-                                        <button type="submit" className="modern-btn primary full-width gradient-btn">
-                                            Provision Account
-                                        </button>
-                                    </form>
-                                </div>
-
-                                {/* Tenant Resource Structure Progress Bars */}
-                                {orgStats && (
-                                    <div className="glass-panel">
-                                        <h3><TrendingUp className="icon" /> Tenant Account Structure</h3>
-                                        <p className="help-text">Distribution of credentials provisioned strictly for this tenant.</p>
-                                        <div className="tenant-structure-list mt-3">
-                                            <div className="tenant-structure-row">
-                                                <div className="structure-metric">
-                                                    <span>Master Admins</span>
-                                                    <strong>{orgStats.totalMasterAdmins}</strong>
-                                                </div>
-                                                <div className="structure-bar-container">
-                                                    <div className="structure-bar ma-bar" style={{ width: `${(orgStats.totalMasterAdmins / (orgStats.totalMasterAdmins + orgStats.totalIssuers + orgStats.totalUsers || 1)) * 100}%` }}></div>
-                                                </div>
-                                            </div>
-                                            <div className="tenant-structure-row mt-3">
-                                                <div className="structure-metric">
-                                                    <span>Active Issuers</span>
-                                                    <strong>{orgStats.totalIssuers}</strong>
-                                                </div>
-                                                <div className="structure-bar-container">
-                                                    <div className="structure-bar issuer-bar" style={{ width: `${(orgStats.totalIssuers / (orgStats.totalMasterAdmins + orgStats.totalIssuers + orgStats.totalUsers || 1)) * 100}%` }}></div>
-                                                </div>
-                                            </div>
-                                            <div className="tenant-structure-row mt-3">
-                                                <div className="structure-metric">
-                                                    <span>Standard Users</span>
-                                                    <strong>{orgStats.totalUsers}</strong>
-                                                </div>
-                                                <div className="structure-bar-container">
-                                                    <div className="structure-bar user-bar" style={{ width: `${(orgStats.totalUsers / (orgStats.totalMasterAdmins + orgStats.totalIssuers + orgStats.totalUsers || 1)) * 100}%` }}></div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Assign Existing Users Panel */}
-                                <div className="glass-panel">
-                                    <h2 className="section-title"><Users className="icon" /> Add Existing Users</h2>
-                                    <p className="help-text">Select from existing users in the system who are not yet part of any organization.</p>
-                                    <div className="unassigned-users-container">
-                                        {unassignedUsers.length === 0 ? (
-                                            <p className="empty-state">No unassigned users available in the system.</p>
-                                        ) : (
-                                            <div className="unassigned-users-list">
-                                                {unassignedUsers.map(user => (
-                                                    <div key={user.id} className="unassigned-user-card">
-                                                        <div className="unassigned-info">
-                                                            <span className="unassigned-email">{user.email}</span>
-                                                            <span className={`status-badge-xs ${user.role === 'master_admin' ? 'danger' : user.role === 'issuer' ? 'warning' : 'success'}`}>
-                                                                {user.role}
-                                                            </span>
-                                                        </div>
-                                                        <button 
-                                                            className="modern-btn primary btn-xs"
-                                                            onClick={() => handleAssignUser(user.id)}
-                                                        >
-                                                            Add to Org
-                                                        </button>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Users belonging to this Org */}
-                            <div className="list-section glass-panel">
-                                <h2 className="section-title">Organization User Directory</h2>
-                                <div className="table-container">
-                                    {orgUsers.length === 0 ? (
-                                        <p className="empty-state">No users belong to this organization yet.</p>
                                     ) : (
-                                        <table className="modern-table">
-                                            <thead>
-                                                <tr>
-                                                    <th>Email</th>
-                                                    <th>Role</th>
-                                                    <th>Actions</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {orgUsers.map(user => (
-                                                    <tr key={user.id} className="table-row">
-                                                        <td>
-                                                            {editingUser === user.id ? (
-                                                                <input 
-                                                                    type="email" 
-                                                                    value={editEmail} 
-                                                                    onChange={(e) => setEditEmail(e.target.value)} 
-                                                                    className="edit-input"
-                                                                />
-                                                            ) : (
-                                                                user.email
-                                                            )}
-                                                        </td>
-                                                        <td>
-                                                            {editingUser === user.id ? (
-                                                                <select 
-                                                                    value={editRole} 
-                                                                    onChange={(e) => setEditRole(e.target.value)} 
-                                                                    className="edit-select"
-                                                                >
-                                                                    <option value="master_admin">Master Admin</option>
-                                                                    <option value="issuer">Issuer</option>
-                                                                    <option value="user">User</option>
-                                                                </select>
-                                                            ) : (
-                                                                <span className={`status-badge ${user.role === 'master_admin' ? 'danger' : user.role === 'issuer' ? 'warning' : 'success'}`}>
-                                                                    {user.role}
-                                                                </span>
-                                                            )}
-                                                        </td>
-                                                        <td>
-                                                            {editingUser === user.id ? (
-                                                                <div className="action-buttons-group">
-                                                                    <button onClick={() => handleSaveUserEdit(user.id)} className="icon-btn success-btn" title="Save">
-                                                                        <Check size={18} />
-                                                                    </button>
-                                                                    <button onClick={handleCancelEdit} className="icon-btn cancel-btn" title="Cancel">
-                                                                        <X size={18} />
-                                                                    </button>
-                                                                </div>
-                                                            ) : (
-                                                                <div className="action-buttons-group">
-                                                                    <button onClick={() => handleStartEdit(user)} className="icon-btn edit-btn" title="Edit details">
-                                                                        <Edit3 size={18} />
-                                                                    </button>
-                                                                    <button onClick={() => handleDeleteUser(user.id)} className="icon-btn delete-btn" title="Delete User">
-                                                                        <Trash2 size={18} />
-                                                                    </button>
-                                                                </div>
-                                                            )}
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
+                                        organizations.map(org => (
+                                            <div 
+                                                key={org.id} 
+                                                onClick={() => setSelectedOrg(org)}
+                                                className="group flex items-center p-4 bg-white border border-slate-200 rounded-2xl hover:border-indigo-300 hover:shadow-md hover:-translate-y-1 transition-all cursor-pointer"
+                                            >
+                                                <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center font-heading font-bold text-xl mr-4 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                                                    {org.name.charAt(0)}
+                                                </div>
+                                                <div className="overflow-hidden">
+                                                    <h4 className="font-bold text-slate-800 truncate">{org.name}</h4>
+                                                    <span className="text-xs text-slate-400 font-mono">ID: {org.id.slice(0, 8)}...</span>
+                                                </div>
+                                            </div>
+                                        ))
                                     )}
                                 </div>
+                            </Card>
+                        </div>
+                    )}
+                </>
+            ) : (
+                // Organization Detail View (Drill down)
+                <div className="fade-in-up">
+                    <div className="flex items-center gap-4 mb-8">
+                        <button 
+                            className="p-2.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition"
+                            onClick={() => setSelectedOrg(null)}
+                        >
+                            <ArrowLeft size={24} />
+                        </button>
+                        <div>
+                            <h1 className="font-heading text-3xl font-bold text-slate-900">{selectedOrg.name}</h1>
+                            <div className="inline-block px-3 py-1 bg-slate-100 text-slate-500 text-xs font-mono rounded-lg mt-2">
+                                Tenant ID: {selectedOrg.id}
                             </div>
                         </div>
                     </div>
-                )}
-            </main>
-        </div>
+
+                    {orgStats && (
+                        <>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
+                                <Card className="border-t-4 border-t-purple-500 flex items-center p-5">
+                                    <div className="bg-purple-50 text-purple-600 p-4 rounded-2xl mr-4">
+                                        <Shield size={28} />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-slate-500 text-sm font-semibold uppercase tracking-wider mb-1">Master Admins</h3>
+                                        <p className="font-heading text-3xl font-bold text-slate-800">{orgStats.totalMasterAdmins}</p>
+                                    </div>
+                                </Card>
+                                <Card className="border-t-4 border-t-blue-500 flex items-center p-5">
+                                    <div className="bg-blue-50 text-blue-600 p-4 rounded-2xl mr-4">
+                                        <Users size={28} />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-slate-500 text-sm font-semibold uppercase tracking-wider mb-1">Active Issuers</h3>
+                                        <p className="font-heading text-3xl font-bold text-slate-800">{orgStats.totalIssuers}</p>
+                                    </div>
+                                </Card>
+                                <Card className="border-t-4 border-t-green-500 flex items-center p-5">
+                                    <div className="bg-green-50 text-green-600 p-4 rounded-2xl mr-4">
+                                        <FileText size={28} />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-slate-500 text-sm font-semibold uppercase tracking-wider mb-1">Documents Issued</h3>
+                                        <p className="font-heading text-3xl font-bold text-slate-800">{orgStats.totalDocuments}</p>
+                                    </div>
+                                </Card>
+                            </div>
+
+                            {/* Individual Organization Weekly Issuance Trend Graph */}
+                            {orgStats.activityTrend && (
+                                <Card className="mb-6">
+                                    <div className="mb-6">
+                                        <h3 className="flex items-center gap-2 font-heading text-lg font-bold text-slate-800">
+                                            <Calendar className="text-indigo-600" /> Individual Document Issuance Trend (Last 7 Days)
+                                        </h3>
+                                        <p className="text-sm text-slate-500 mt-1">Visual analysis of document activities strictly related to this tenant over the past week.</p>
+                                    </div>
+                                    <div className="flex items-end gap-2 h-48 mt-4 pt-8 border-b border-slate-100 px-4">
+                                        {orgStats.activityTrend.map((t, idx) => {
+                                            const maxVal = Math.max(...orgStats.activityTrend.map(x => x.count), 1);
+                                            const heightPercent = (t.count / maxVal) * 100;
+                                            return (
+                                                <div key={idx} className="flex flex-col items-center flex-1 h-full justify-end group">
+                                                    <div className="w-full px-1 flex flex-col justify-end" style={{ height: '100%' }}>
+                                                        <div 
+                                                            className="w-full bg-indigo-200 group-hover:bg-indigo-500 rounded-t-md transition-all relative flex items-start justify-center" 
+                                                            style={{ height: `${Math.max(heightPercent, 5)}%` }}
+                                                        >
+                                                            {t.count > 0 && <span className="absolute -top-6 text-xs font-bold text-slate-600 bg-white px-2 py-0.5 rounded shadow-sm opacity-0 group-hover:opacity-100 transition">{t.count}</span>}
+                                                        </div>
+                                                    </div>
+                                                    <span className="text-xs text-slate-400 font-medium mt-2">{t.date.slice(-2)}</span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </Card>
+                            )}
+                        </>
+                    )}
+
+                    <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                        <div className="xl:col-span-1 space-y-6">
+                            <Card>
+                                <div className="mb-5">
+                                    <h2 className="flex items-center gap-2 font-heading text-lg font-bold text-slate-800">
+                                        <PlusCircle className="text-indigo-600" /> Provision User
+                                    </h2>
+                                    <p className="text-sm text-slate-500 mt-1">Directly add a new administrator, issuer, or user to this organization.</p>
+                                </div>
+                                <form onSubmit={handleCreateOrgUser} className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-semibold text-slate-700 mb-2">User Role</label>
+                                        <select 
+                                            value={newAdminRole}
+                                            onChange={(e) => setNewAdminRole(e.target.value)}
+                                            required
+                                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all outline-none"
+                                        >
+                                            <option value="master_admin">Master Admin</option>
+                                            <option value="issuer">Issuer (Blockchain Wallet)</option>
+                                            <option value="user">Standard User (Verifier)</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-slate-700 mb-2">Email Address</label>
+                                        <input 
+                                            type="email" 
+                                            placeholder="user@university.edu"
+                                            value={newAdminEmail}
+                                            onChange={(e) => setNewAdminEmail(e.target.value)}
+                                            required 
+                                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all outline-none"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-slate-700 mb-2">Secure Password</label>
+                                        <input 
+                                            type="password" 
+                                            placeholder="Min 6 characters"
+                                            value={newAdminPassword}
+                                            onChange={(e) => setNewAdminPassword(e.target.value)}
+                                            required 
+                                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all outline-none"
+                                        />
+                                    </div>
+                                    <BtnPrimary className="w-full justify-center">Provision Account</BtnPrimary>
+                                </form>
+                            </Card>
+
+                            <Card>
+                                <div className="mb-4">
+                                    <h2 className="flex items-center gap-2 font-heading text-lg font-bold text-slate-800">
+                                        <Users className="text-indigo-600" /> Add Existing Users
+                                    </h2>
+                                    <p className="text-sm text-slate-500 mt-1">Select from existing users who are not yet part of any organization.</p>
+                                </div>
+                                <div className="max-h-64 overflow-y-auto pr-2 space-y-2">
+                                    {unassignedUsers.length === 0 ? (
+                                        <p className="text-center text-slate-500 italic text-sm py-4 bg-slate-50 rounded-xl border border-slate-100">No unassigned users available.</p>
+                                    ) : (
+                                        unassignedUsers.map(user => (
+                                            <div key={user.id} className="flex justify-between items-center p-3 border border-slate-100 rounded-xl hover:bg-slate-50">
+                                                <div>
+                                                    <span className="block text-sm font-semibold text-slate-800">{user.email}</span>
+                                                    <div className="mt-1"><RoleBadge role={user.role} /></div>
+                                                </div>
+                                                <button 
+                                                    className="px-3 py-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-lg text-xs font-bold transition"
+                                                    onClick={() => handleAssignUser(user.id)}
+                                                >
+                                                    Add
+                                                </button>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </Card>
+                        </div>
+
+                        <div className="xl:col-span-2">
+                            <Card className="h-full">
+                                <h2 className="font-heading text-xl font-bold text-slate-800 mb-6">Organization User Directory</h2>
+                                {orgUsers.length === 0 ? (
+                                    <div className="py-12 text-center text-slate-500 italic bg-slate-50 rounded-2xl border border-slate-100">
+                                        No users belong to this organization yet.
+                                    </div>
+                                ) : (
+                                    <Table headers={['Email', 'Role', 'Actions']}>
+                                        {orgUsers.map(user => (
+                                            <tr key={user.id} className="hover:bg-slate-50/50 border-b border-slate-100 last:border-0 transition-colors">
+                                                <td className="p-4 align-middle">
+                                                    {editingUser === user.id ? (
+                                                        <input 
+                                                            type="email" 
+                                                            value={editEmail} 
+                                                            onChange={(e) => setEditEmail(e.target.value)} 
+                                                            className="w-full px-3 py-1.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-600 outline-none text-sm"
+                                                        />
+                                                    ) : (
+                                                        <span className="font-medium text-slate-700">{user.email}</span>
+                                                    )}
+                                                </td>
+                                                <td className="p-4 align-middle">
+                                                    {editingUser === user.id ? (
+                                                        <select 
+                                                            value={editRole} 
+                                                            onChange={(e) => setEditRole(e.target.value)} 
+                                                            className="px-3 py-1.5 rounded-lg border border-slate-300 outline-none text-sm"
+                                                        >
+                                                            <option value="master_admin">Master Admin</option>
+                                                            <option value="issuer">Issuer</option>
+                                                            <option value="user">User</option>
+                                                        </select>
+                                                    ) : (
+                                                        <RoleBadge role={user.role} />
+                                                    )}
+                                                </td>
+                                                <td className="p-4 align-middle">
+                                                    {editingUser === user.id ? (
+                                                        <div className="flex gap-2">
+                                                            <button onClick={() => handleSaveUserEdit(user.id)} className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition" title="Save">
+                                                                <Check size={18} />
+                                                            </button>
+                                                            <button onClick={handleCancelEdit} className="p-1.5 text-slate-400 hover:bg-slate-100 rounded-lg transition" title="Cancel">
+                                                                <X size={18} />
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex gap-2">
+                                                            <button onClick={() => handleStartEdit(user)} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition" title="Edit details">
+                                                                <Edit3 size={18} />
+                                                            </button>
+                                                            <button onClick={() => handleDeleteUser(user.id)} className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition" title="Delete User">
+                                                                <Trash2 size={18} />
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </Table>
+                                )}
+                            </Card>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </PageWrapper>
     );
 }

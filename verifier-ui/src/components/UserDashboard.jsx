@@ -1,238 +1,155 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Shield, User, Building, FileText, ExternalLink, Download, 
-  Database, Mail, Search, LogOut, CheckCircle2, AlertTriangle, Loader2 
+import {
+  Shield, User, Building, FileText, ExternalLink,
+  Download, Database, Mail, Search, LogOut,
+  CheckCircle2, AlertTriangle, Loader2
 } from 'lucide-react';
+import {
+  PageWrapper, DashHeader, UserBadge, BtnMuted, BtnLogout, BtnPrimary, BtnProof,
+  Card, SectionTitle, SectionSubtitle, Field, inputCls, DropZone,
+  Table, Th, Td, EmptyRow, RecipientAvatar, CredBadge, LinkAction,
+  ResultCard, SpinLabel, Badge
+} from './ui';
 
-const UserDashboard = ({ 
-  myDocuments, 
-  verifyContractAddress, setVerifyContractAddress, 
-  verifyCredentialText, setVerifyCredentialText, 
-  verifyFile, setVerifyFile, 
-  handleVerify, 
-  verifyResult, 
-  handleLogout,
-  isVerifying,
-  token,
-  fetchMyDocuments,
-  showModal
+const UserDashboard = ({
+  myDocuments,
+  verifyContractAddress, setVerifyContractAddress,
+  verifyCredentialText, setVerifyCredentialText,
+  verifyFile, setVerifyFile,
+  handleVerify, verifyResult,
+  handleLogout, isVerifying,
+  token, fetchMyDocuments, showModal
 }) => {
   const navigate = useNavigate();
 
-  // Dynamic mount fetch to prevent stale data glitches
   useEffect(() => {
-    if (token && fetchMyDocuments) {
-      fetchMyDocuments(token);
-    }
+    if (token && fetchMyDocuments) fetchMyDocuments(token);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   return (
-    <div className="dashboard-container">
-      <header className="dashboard-header animate-slide-down">
-        <div className="header-brand">
-          <div className="header-logo">
-            <Shield size={22} className="logo-svg" />
-          </div>
-          <h1>EduDocs</h1>
-        </div>
-        <div className="header-actions">
-          <div className="user-badge" style={{ cursor: 'pointer' }} onClick={() => navigate('/profile')}>
-            <div className="avatar-sm">
-              <User size={14} />
-            </div>
-            <span>User Portal</span>
-          </div>
-          <button onClick={() => navigate('/profile')} className="btn-primary-muted">
-            My Profile
-          </button>
-          <button onClick={handleLogout} className="btn-logout">
-            <LogOut size={14} style={{ marginRight: '6px' }} />
-            Sign Out
-          </button>
-        </div>
-      </header>
-      
-      <div className="dashboard-layout">
-        {/* Document List Section */}
-        <section className="dashboard-section card-white animate-fade-in full-span">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <h2>Secured Identity & Academic Assets</h2>
-            <span className="status-badge success">{myDocuments.length} Verified Records</span>
-          </div>
-          <p className="section-subtitle">These credentials have been cryptographically anchored directly to your unique academic profile on the public ledger.</p>
-          
-          <div className="table-container">
-            <table className="modern-table">
-              <thead>
-                <tr>
-                  <th>Issuer Source</th>
-                  <th>Document Asset</th>
-                  <th>Credential ID</th>
-                  <th>Issuance Date</th>
-                  <th style={{ textAlign: 'center' }}>Secure Access</th>
-                  <th style={{ textAlign: 'right' }}>Ledger Proof</th>
-                </tr>
-              </thead>
-              <tbody>
-                {myDocuments.length === 0 ? (
-                  <tr>
-                    <td colSpan="6" className="empty-state-cell">
-                      No documents associated with your profile on this network.
-                    </td>
-                  </tr>
-                ) : (
-                  myDocuments.map((doc, i) => (
-                    <tr key={i} className="table-row">
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <div className="recipient-avatar" style={{ background: '#f5f3ff', color: '#8b5cf6' }}>
-                            <Building size={14} />
-                          </div>
-                          <span style={{ fontWeight: '600' }}>{doc.issuer}</span>
-                        </div>
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <FileText size={14} className="text-secondary" />
-                          <span>{doc.originalName}</span>
-                        </div>
-                      </td>
-                      <td>
-                        <span className="credential-id-badge" title={doc.credentialId}>
-                          {doc.credentialId.substring(0, 10)}...{doc.credentialId.substring(doc.credentialId.length - 8)}
-                        </span>
-                      </td>
-                      <td>{new Date(doc.issuedAt).toLocaleDateString()}</td>
-                      <td style={{ textAlign: 'center' }}>
-                        {doc.documentUrl ? (
-                          <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                            <a href={doc.documentUrl} target="_blank" rel="noopener noreferrer" className="link-action">
-                              <ExternalLink size={12} /> Preview
-                            </a>
-                            <a href={doc.documentUrl.replace('/upload/', '/upload/fl_attachment/')} target="_blank" rel="noopener noreferrer" className="link-action download">
-                              <Download size={12} /> Download
-                            </a>
-                          </div>
-                        ) : (
-                          <span className="local-storage-badge">Local Storage</span>
-                        )}
-                      </td>
-                      <td style={{ textAlign: 'right' }}>
-                        <button 
-                          onClick={() => alert("TX Hash Proof: " + doc.txHash)} 
-                          className="btn-proof"
-                        >
-                          View Audit Proof
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
+    <PageWrapper>
+      <DashHeader logo={<Shield size={20} />} title="EduDocs">
+        <UserBadge icon={<User size={12} />} label="User Portal" />
+        <BtnMuted onClick={() => navigate('/profile')}>My Profile</BtnMuted>
+        <BtnLogout onClick={handleLogout}><LogOut size={14} /> Sign Out</BtnLogout>
+      </DashHeader>
 
-        <div className="grid-2-col">
-          {/* Self-Verification Section */}
-          <section className="dashboard-section card-white delay-1 animate-fade-in">
-            <h2>Independent Provenance Audit</h2>
-            <p className="section-subtitle">Perform a local and blockchain-synchronized validation audit of any credentials PDF.</p>
-            
-            <form onSubmit={handleVerify} className="dashboard-form">
-              <div className="form-group" style={{ marginBottom: '16px' }}>
-                <label>Verification Contract</label>
-                <div className="input-wrapper">
-                  <span className="input-icon">
-                    <Database size={16} />
-                  </span>
-                  <input 
-                    type="text" 
-                    placeholder="0x..." 
-                    value={verifyContractAddress} 
-                    onChange={e => setVerifyContractAddress(e.target.value)} 
-                    required 
-                    disabled={isVerifying}
-                  />
-                </div>
-              </div>
-              <div className="form-group" style={{ marginBottom: '24px' }}>
-                <label>Owner Academic Email</label>
-                <div className="input-wrapper">
-                  <span className="input-icon">
-                    <Mail size={16} />
-                  </span>
-                  <input 
-                    type="email" 
-                    placeholder="name@email.com" 
-                    value={verifyCredentialText} 
-                    onChange={e => setVerifyCredentialText(e.target.value)} 
-                    required 
-                    disabled={isVerifying}
-                  />
-                </div>
-              </div>
-              
-              <div className="drop-zone mini" style={{ marginBottom: '24px', padding: '24px', position: 'relative', overflow: 'hidden' }}>
-                <input 
-                  type="file" 
-                  accept="application/pdf" 
-                  onChange={e => setVerifyFile(e.target.files[0])} 
-                  required 
-                  disabled={isVerifying}
-                />
-                {isVerifying ? (
-                  <div className="scanner-container">
-                    <div className="scanner-line"></div>
-                    <Loader2 className="animate-spin text-primary" size={24} style={{ marginBottom: '12px' }} />
-                    <p className="drop-zone-text scanner-pulse">Hashing & Verifying Document...</p>
-                    <p className="drop-zone-subtext">Executing cryptographic proof on ledger</p>
-                  </div>
-                ) : (
-                  <>
-                    <span className="drop-zone-icon" style={{ fontSize: '24px' }}>
-                      <Search size={24} className="text-primary" />
-                    </span>
-                    {verifyFile ? (
-                      <p className="drop-zone-text text-highlight">{verifyFile.name}</p>
+      <div className="grid gap-7">
+        {/* Documents Table */}
+        <Card className="animate-fade-in">
+          <SectionTitle badge={<Badge variant="success">{myDocuments.length} Verified Records</Badge>}>
+            Secured Identity &amp; Academic Assets
+          </SectionTitle>
+          <SectionSubtitle>
+            These credentials have been cryptographically anchored to your academic profile on the public ledger.
+          </SectionSubtitle>
+
+          <Table>
+            <thead>
+              <tr>
+                <Th>Issuer</Th>
+                <Th>Document</Th>
+                <Th>Credential ID</Th>
+                <Th>Issued</Th>
+                <Th center>Access</Th>
+                <Th center>Ledger Proof</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {myDocuments.length === 0 ? (
+                <EmptyRow cols={6} message="No documents associated with your profile on this network." />
+              ) : myDocuments.map((doc, i) => (
+                <tr key={i} className="hover:bg-slate-50/70 transition">
+                  <Td>
+                    <div className="flex items-center gap-3">
+                      <RecipientAvatar icon={<Building size={14} />} bgCls="bg-violet-100 text-violet-600" />
+                      <span className="font-semibold text-slate-800">{doc.issuer}</span>
+                    </div>
+                  </Td>
+                  <Td>
+                    <div className="flex items-center gap-2 text-slate-600">
+                      <FileText size={14} className="text-slate-400" />
+                      {doc.originalName}
+                    </div>
+                  </Td>
+                  <Td><CredBadge id={doc.credentialId} /></Td>
+                  <Td>{new Date(doc.issuedAt).toLocaleDateString()}</Td>
+                  <Td center>
+                    {doc.documentUrl ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <LinkAction href={doc.documentUrl}><ExternalLink size={11} />Preview</LinkAction>
+                        <LinkAction href={doc.documentUrl.replace('/upload/', '/upload/fl_attachment/')} download>
+                          <Download size={11} />Download
+                        </LinkAction>
+                      </div>
                     ) : (
-                      <p className="drop-zone-text">Click or drop certificate PDF for validation</p>
+                      <span className="text-xs italic text-slate-400">Local only</span>
                     )}
-                  </>
-                )}
-              </div>
+                  </Td>
+                  <Td center>
+                    <BtnProof onClick={() => showModal
+                      ? showModal('Ledger Proof', 'TX Hash: ' + doc.txHash)
+                      : alert('TX Hash: ' + doc.txHash)}
+                    />
+                  </Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </Card>
 
-              <button type="submit" className="btn-primary" style={{ width: '100%' }} disabled={isVerifying}>
-                {isVerifying ? (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                    <Loader2 className="animate-spin" size={18} />
-                    <span>Analyzing Blockchain Blocks...</span>
-                  </div>
-                ) : (
-                  <span>Execute Audit</span>
-                )}
-              </button>
-            </form>
-          </section>
-          
-          <section className="dashboard-section" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            {verifyResult && !isVerifying && (
-              <div className={`result-card animate-pop-in ${verifyResult.includes('✅') ? 'success' : 'error'}`} style={{ marginTop: 0 }}>
-                <div className="result-icon">
-                  {verifyResult.includes('✅') ? <CheckCircle2 className="success-icon" size={28} /> : <AlertTriangle className="error-icon" size={28} />}
+        {/* Verification + Result */}
+        <Card className="animate-fade-in delay-100">
+          <SectionTitle>Independent Provenance Audit</SectionTitle>
+          <SectionSubtitle>
+            Perform a blockchain-synchronized validation audit of any credential PDF.
+          </SectionSubtitle>
+
+          <form onSubmit={handleVerify} className="flex flex-col gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <Field label="Verification Contract" icon={<Database size={15} />}>
+                  <input type="text" placeholder="0x..." value={verifyContractAddress}
+                    onChange={e => setVerifyContractAddress(e.target.value)}
+                    required disabled={isVerifying} className={inputCls()} />
+                </Field>
+
+                <Field label="Owner Academic Email" icon={<Mail size={15} />}>
+                  <input type="email" placeholder="name@email.com" value={verifyCredentialText}
+                    onChange={e => setVerifyCredentialText(e.target.value)}
+                    required disabled={isVerifying} className={inputCls()} />
+                </Field>
+            </div>
+
+            <DropZone mini accept="application/pdf"
+              onChange={e => setVerifyFile(e.target.files[0])}
+              required disabled={isVerifying}>
+              {isVerifying ? (
+                <div className="flex flex-col items-center gap-2 py-2">
+                  <div className="scanner-line" />
+                  <Loader2 className="animate-spin text-indigo-600" size={22} />
+                  <p className="text-xs font-bold text-indigo-600 tracking-widest uppercase">Hashing & Verifying…</p>
                 </div>
-                <div className="result-content">
-                  <h3>{verifyResult.includes('✅') ? 'Audit Result: Authenticity Passed' : 'Audit Result: Authenticity Failed'}</h3>
-                  <p className="result-details" style={{ fontSize: '15px' }}>{verifyResult}</p>
-                </div>
-              </div>
-            )}
-          </section>
-        </div>
+              ) : (
+                <>
+                  <Search size={22} className="text-indigo-500" />
+                  <p className="text-sm font-semibold text-slate-700">
+                    {verifyFile ? verifyFile.name : 'Click or drop certificate PDF'}
+                  </p>
+                </>
+              )}
+            </DropZone>
+
+            <BtnPrimary type="submit" disabled={isVerifying} className="w-full max-w-sm mx-auto">
+              {isVerifying ? <SpinLabel label="Analyzing blockchain blocks…" /> : 'Execute Audit'}
+            </BtnPrimary>
+          </form>
+
+          {verifyResult && !isVerifying && <ResultCard result={verifyResult} />}
+        </Card>
       </div>
-    </div>
+    </PageWrapper>
   );
 };
 

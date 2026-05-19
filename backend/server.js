@@ -28,17 +28,17 @@ const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 // Cloudinary config
-cloudinary.config({ 
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME, 
-  api_key: process.env.CLOUDINARY_API_KEY, 
-  api_secret: process.env.CLOUDINARY_API_SECRET 
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
 });
 const RPC_URL = process.env.RPC_URL || 'http://127.0.0.1:8545';
 const HARDHAT_FUNDER_KEY = process.env.HARDHAT_FUNDER_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'; // Account 0
 
 // We use the service role key to bypass RLS for admin actions
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-  auth: { autoRefreshToken: false, persistSession: false }
+    auth: { autoRefreshToken: false, persistSession: false }
 });
 
 let transporter;
@@ -77,9 +77,9 @@ if (process.env.SMTP_USER && process.env.SMTP_PASS) {
 // Config for automation
 let localConfig = { contractAddress: '' };
 try {
-  localConfig = require('./config.json');
+    localConfig = require('./config.json');
 } catch (e) {
-  console.log("No config.json found in backend. Using environment or manual input.");
+    console.log("No config.json found in backend. Using environment or manual input.");
 }
 
 const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS || localConfig.contractAddress;
@@ -95,285 +95,285 @@ function sanitizeAndValidatePrivateKey(key) {
     if (sanitized.startsWith("'") && sanitized.endsWith("'")) {
         sanitized = sanitized.slice(1, -1).trim();
     }
-    
+
     let hex = sanitized.startsWith('0x') ? sanitized.slice(2) : sanitized;
-    
+
     if (hex.length === 40) {
         throw new Error('You pasted a Blockchain Address (40 characters) instead of a Private Key (64 characters). Please check your welcome credentials and enter the correct private key.');
     }
-    
+
     if (hex.length !== 64 || !/^[0-9a-fA-F]+$/.test(hex)) {
         throw new Error('Invalid Private Key length or characters. An Ethereum private key must be exactly 64 hexadecimal characters (66 with "0x").');
     }
-    
+
     return sanitized.startsWith('0x') ? sanitized : '0x' + sanitized;
 }
 
 app.post('/api/auth/create_user', async (req, res) => {
-  const { masterAdminToken, email, password, role } = req.body;
-  
-  if (!masterAdminToken) return res.status(401).json({ error: 'Unauthorized' });
-  
-  try {
-    // Verify master admin
-    const { data: { user: adminUser }, error: verifyError } = await supabase.auth.getUser(masterAdminToken);
-    if (verifyError || !adminUser) throw new Error('Invalid token');
-    
-    // Create new Supabase user
-    const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true // auto-confirm for simplicity
-    });
-    if (createError) throw new Error(createError.message);
+    const { masterAdminToken, email, password, role } = req.body;
 
-    // Generate Hardhat Wallet
-    const wallet = ethers.Wallet.createRandom();
-    const hardhat_key = wallet.privateKey;
-    const address = wallet.address;
+    if (!masterAdminToken) return res.status(401).json({ error: 'Unauthorized' });
 
-    // Optional: Fund the wallet if it's an issuer
-    if (role === 'issuer') {
-        try {
-            const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
-            const funderWallet = new ethers.Wallet(HARDHAT_FUNDER_KEY, provider);
-            const tx = await funderWallet.sendTransaction({
-                to: address,
-                value: ethers.utils.parseEther("1.0")
-            });
-            await tx.wait();
-            console.log(`Funded Issuer ${address} with 1 ETH`);
-        } catch (err) {
-            console.log("Could not auto-fund wallet (node might be down), proceeding anyway.");
-        }
-    }
-
-    const { data: adminProfile } = await supabase.from('profiles').select('organization_id').eq('id', adminUser.id).single();
-    const orgId = adminProfile ? adminProfile.organization_id : null;
-    
-    if (!orgId) {
-        throw new Error('Master Admin must belong to an organization to create users.');
-    }
-
-    // Save profile config
-    const { error: profileError } = await supabase.from('profiles').insert([
-      { 
-        id: newUser.user.id, 
-        role: role, 
-        blockchain_address: address,
-        hardhat_key: hardhat_key,
-        first_login_complete: false,
-        organization_id: orgId
-      }
-    ]);
-    if (profileError) throw new Error(profileError.message);
-
-    // Send real email via SMTP
-    const mailOptions = {
-        from: `"EduDocs Admin" <${process.env.SMTP_USER || 'no-reply@edudocs.test'}>`,
-        to: email,
-        subject: 'Your EduDocs Account Credentials',
-        text: `Welcome! Here are your login details:\n\nEmail: ${email}\nPassword: ${password}\nHasdnet Free Token (Private Key): ${hardhat_key}\n\nYou will need all three to login the first time. Keep your private key safe!`,
-    };
-    
     try {
-        if (transporter) {
-            const info = await transporter.sendMail(mailOptions);
-            console.log('\n--- WELCOME EMAIL SENT ---');
-            if (nodemailer.getTestMessageUrl(info)) {
-                console.log('Preview URL: ' + nodemailer.getTestMessageUrl(info));
+        // Verify master admin
+        const { data: { user: adminUser }, error: verifyError } = await supabase.auth.getUser(masterAdminToken);
+        if (verifyError || !adminUser) throw new Error('Invalid token');
+
+        // Create new Supabase user
+        const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
+            email,
+            password,
+            email_confirm: true // auto-confirm for simplicity
+        });
+        if (createError) throw new Error(createError.message);
+
+        // Generate Hardhat Wallet
+        const wallet = ethers.Wallet.createRandom();
+        const hardhat_key = wallet.privateKey;
+        const address = wallet.address;
+
+        // Optional: Fund the wallet if it's an issuer
+        if (role === 'issuer') {
+            try {
+                const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
+                const funderWallet = new ethers.Wallet(HARDHAT_FUNDER_KEY, provider);
+                const tx = await funderWallet.sendTransaction({
+                    to: address,
+                    value: ethers.utils.parseEther("1.0")
+                });
+                await tx.wait();
+                console.log(`Funded Issuer ${address} with 1 ETH`);
+            } catch (err) {
+                console.log("Could not auto-fund wallet (node might be down), proceeding anyway.");
             }
-            console.log('------------------\n');
         }
-    } catch (mailErr) {
-        console.error('Error sending welcome email:', mailErr);
-    }
 
-    res.json({ 
-        message: 'User created successfully.',
-        credentials: {
-            email: email,
-            password: password,
-            hardhat_key: hardhat_key
+        const { data: adminProfile } = await supabase.from('profiles').select('organization_id').eq('id', adminUser.id).single();
+        const orgId = adminProfile ? adminProfile.organization_id : null;
+
+        if (!orgId) {
+            throw new Error('Master Admin must belong to an organization to create users.');
         }
-    });
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-});
 
-app.post('/api/auth/bulk_create_users', async (req, res) => {
-  const { masterAdminToken, emails, role } = req.body;
-  
-  if (!masterAdminToken || !emails || !Array.isArray(emails) || !role) {
-    return res.status(400).json({ error: 'Missing required parameters' });
-  }
-  
-  try {
-    // 1. Verify master admin or super admin
-    const { data: { user: adminUser }, error: verifyError } = await supabase.auth.getUser(masterAdminToken);
-    if (verifyError || !adminUser) throw new Error('Invalid token');
-    
-    const { data: adminProfile } = await supabase.from('profiles').select('organization_id, role').eq('id', adminUser.id).single();
-    if (!adminProfile || (adminProfile.role !== 'master_admin' && adminProfile.role !== 'super_admin')) {
-        throw new Error('Unauthorized role. Only administrators can import users.');
-    }
-    const orgId = adminProfile ? adminProfile.organization_id : null;
-    if (!orgId) {
-        throw new Error('Admin must belong to an organization to import users.');
-    }
-
-    const results = { success: [], errors: [] };
-
-    // 2. Loop and create each user
-    for (const rawEmail of emails) {
-        const email = rawEmail.trim().toLowerCase();
-        if (!email || !email.includes('@')) {
-            results.errors.push({ email, error: 'Invalid email address' });
-            continue;
-        }
-        
-        try {
-            // Generate automatic secure random password (8 chars random + suffix)
-            const password = crypto.randomBytes(6).toString('hex') + 'Edu!1';
-            
-            // Create Supabase user
-            const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
-              email,
-              password,
-              email_confirm: true
-            });
-            if (createError) throw new Error(createError.message);
-
-            // Generate Hardhat Wallet
-            const wallet = ethers.Wallet.createRandom();
-            const hardhat_key = wallet.privateKey;
-            const address = wallet.address;
-
-            // Optional: Fund the wallet if it's an issuer
-            if (role === 'issuer') {
-                try {
-                    const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
-                    const funderWallet = new ethers.Wallet(HARDHAT_FUNDER_KEY, provider);
-                    const tx = await funderWallet.sendTransaction({
-                        to: address,
-                        value: ethers.utils.parseEther("1.0")
-                    });
-                    await tx.wait();
-                } catch (err) {
-                    console.log("Could not auto-fund wallet (node might be down), proceeding anyway.");
-                }
-            }
-
-            // Save profile config
-            const { error: profileError } = await supabase.from('profiles').insert([
-              { 
-                id: newUser.user.id, 
-                role: role, 
+        // Save profile config
+        const { error: profileError } = await supabase.from('profiles').insert([
+            {
+                id: newUser.user.id,
+                role: role,
                 blockchain_address: address,
                 hardhat_key: hardhat_key,
                 first_login_complete: false,
                 organization_id: orgId
-              }
-            ]);
-            if (profileError) throw new Error(profileError.message);
-
-            // Send real email via SMTP welcome details
-            const mailOptions = {
-                from: `"EduDocs Admin" <${process.env.SMTP_USER || 'no-reply@edudocs.test'}>`,
-                to: email,
-                subject: 'Your EduDocs Account Credentials Ready',
-                text: `Welcome! An administrator has created an account for you on the EduDocs Platform.\n\nHere are your first-time login credentials:\n\nEmail: ${email}\nPassword: ${password}\nHasdnet Free Token (Private Key): ${hardhat_key}\n\nYou will need all three to login the first time. Keep your private key safe!`,
-            };
-            
-            try {
-                if (transporter) {
-                    await transporter.sendMail(mailOptions);
-                }
-            } catch (mailErr) {
-                console.error('Error sending welcome email:', mailErr);
             }
+        ]);
+        if (profileError) throw new Error(profileError.message);
 
-            results.success.push({ email, address });
-        } catch (singleErr) {
-            results.errors.push({ email, error: singleErr.message });
+        // Send real email via SMTP
+        const mailOptions = {
+            from: `"EduDocs Admin" <${process.env.SMTP_USER || 'no-reply@edudocs.test'}>`,
+            to: email,
+            subject: 'Your EduDocs Account Credentials',
+            text: `Welcome! Here are your login details:\n\nEmail: ${email}\nPassword: ${password}\nHasdnet Free Token (Private Key): ${hardhat_key}\n\nYou will need all three to login the first time. Keep your private key safe!`,
+        };
+
+        try {
+            if (transporter) {
+                const info = await transporter.sendMail(mailOptions);
+                console.log('\n--- WELCOME EMAIL SENT ---');
+                if (nodemailer.getTestMessageUrl(info)) {
+                    console.log('Preview URL: ' + nodemailer.getTestMessageUrl(info));
+                }
+                console.log('------------------\n');
+            }
+        } catch (mailErr) {
+            console.error('Error sending welcome email:', mailErr);
         }
+
+        res.json({
+            message: 'User created successfully.',
+            credentials: {
+                email: email,
+                password: password,
+                hardhat_key: hardhat_key
+            }
+        });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+app.post('/api/auth/bulk_create_users', async (req, res) => {
+    const { masterAdminToken, emails, role } = req.body;
+
+    if (!masterAdminToken || !emails || !Array.isArray(emails) || !role) {
+        return res.status(400).json({ error: 'Missing required parameters' });
     }
 
-    res.json({ 
-        message: `Bulk import completed. Created: ${results.success.length}, Failed: ${results.errors.length}`,
-        results
-    });
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
+    try {
+        // 1. Verify master admin or super admin
+        const { data: { user: adminUser }, error: verifyError } = await supabase.auth.getUser(masterAdminToken);
+        if (verifyError || !adminUser) throw new Error('Invalid token');
+
+        const { data: adminProfile } = await supabase.from('profiles').select('organization_id, role').eq('id', adminUser.id).single();
+        if (!adminProfile || (adminProfile.role !== 'master_admin' && adminProfile.role !== 'super_admin')) {
+            throw new Error('Unauthorized role. Only administrators can import users.');
+        }
+        const orgId = adminProfile ? adminProfile.organization_id : null;
+        if (!orgId) {
+            throw new Error('Admin must belong to an organization to import users.');
+        }
+
+        const results = { success: [], errors: [] };
+
+        // 2. Loop and create each user
+        for (const rawEmail of emails) {
+            const email = rawEmail.trim().toLowerCase();
+            if (!email || !email.includes('@')) {
+                results.errors.push({ email, error: 'Invalid email address' });
+                continue;
+            }
+
+            try {
+                // Generate automatic secure random password (8 chars random + suffix)
+                const password = crypto.randomBytes(6).toString('hex') + 'Edu!1';
+
+                // Create Supabase user
+                const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
+                    email,
+                    password,
+                    email_confirm: true
+                });
+                if (createError) throw new Error(createError.message);
+
+                // Generate Hardhat Wallet
+                const wallet = ethers.Wallet.createRandom();
+                const hardhat_key = wallet.privateKey;
+                const address = wallet.address;
+
+                // Optional: Fund the wallet if it's an issuer
+                if (role === 'issuer') {
+                    try {
+                        const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
+                        const funderWallet = new ethers.Wallet(HARDHAT_FUNDER_KEY, provider);
+                        const tx = await funderWallet.sendTransaction({
+                            to: address,
+                            value: ethers.utils.parseEther("1.0")
+                        });
+                        await tx.wait();
+                    } catch (err) {
+                        console.log("Could not auto-fund wallet (node might be down), proceeding anyway.");
+                    }
+                }
+
+                // Save profile config
+                const { error: profileError } = await supabase.from('profiles').insert([
+                    {
+                        id: newUser.user.id,
+                        role: role,
+                        blockchain_address: address,
+                        hardhat_key: hardhat_key,
+                        first_login_complete: false,
+                        organization_id: orgId
+                    }
+                ]);
+                if (profileError) throw new Error(profileError.message);
+
+                // Send real email via SMTP welcome details
+                const mailOptions = {
+                    from: `"EduDocs Admin" <${process.env.SMTP_USER || 'no-reply@edudocs.test'}>`,
+                    to: email,
+                    subject: 'Your EduDocs Account Credentials Ready',
+                    text: `Welcome! An administrator has created an account for you on the EduDocs Platform.\n\nHere are your first-time login credentials:\n\nEmail: ${email}\nPassword: ${password}\nHasdnet Free Token (Private Key): ${hardhat_key}\n\nYou will need all three to login the first time. Keep your private key safe!`,
+                };
+
+                try {
+                    if (transporter) {
+                        await transporter.sendMail(mailOptions);
+                    }
+                } catch (mailErr) {
+                    console.error('Error sending welcome email:', mailErr);
+                }
+
+                results.success.push({ email, address });
+            } catch (singleErr) {
+                results.errors.push({ email, error: singleErr.message });
+            }
+        }
+
+        res.json({
+            message: `Bulk import completed. Created: ${results.success.length}, Failed: ${results.errors.length}`,
+            results
+        });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
 });
 
 // Custom first login
 app.post('/api/auth/first_login', async (req, res) => {
-  const { email, password, hardhat_key } = req.body;
-  if (!email || !password || !hardhat_key) {
-    return res.status(400).json({ error: 'Email, password, and hardhat token are required for first login' });
-  }
-
-  try {
-    // 1. Sign in via Supabase for credentials check
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email, password
-    });
-    if (authError) throw new Error(authError.message);
-
-    const userToken = authData.session.access_token;
-    const userId = authData.user.id;
-
-    // 2. Look up profile
-    const { data: profile, error: fetchError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-    
-    if (fetchError || !profile) throw new Error('Profile not found.');
-
-    if (profile.first_login_complete) {
-        return res.status(400).json({ error: 'First login already completed. Use regular login.' });
+    const { email, password, hardhat_key } = req.body;
+    if (!email || !password || !hardhat_key) {
+        return res.status(400).json({ error: 'Email, password, and hardhat token are required for first login' });
     }
 
-    // 3. Verify hardhat key matches the assigned address
-    let derivedAddress;
-    let validatedKey;
     try {
-        validatedKey = sanitizeAndValidatePrivateKey(hardhat_key);
-        const wallet = new ethers.Wallet(validatedKey);
-        derivedAddress = wallet.address;
-    } catch(e) {
-        throw new Error(e.message || 'Invalid hardhat token format.');
+        // 1. Sign in via Supabase for credentials check
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+            email, password
+        });
+        if (authError) throw new Error(authError.message);
+
+        const userToken = authData.session.access_token;
+        const userId = authData.user.id;
+
+        // 2. Look up profile
+        const { data: profile, error: fetchError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', userId)
+            .single();
+
+        if (fetchError || !profile) throw new Error('Profile not found.');
+
+        if (profile.first_login_complete) {
+            return res.status(400).json({ error: 'First login already completed. Use regular login.' });
+        }
+
+        // 3. Verify hardhat key matches the assigned address
+        let derivedAddress;
+        let validatedKey;
+        try {
+            validatedKey = sanitizeAndValidatePrivateKey(hardhat_key);
+            const wallet = new ethers.Wallet(validatedKey);
+            derivedAddress = wallet.address;
+        } catch (e) {
+            throw new Error(e.message || 'Invalid hardhat token format.');
+        }
+
+        if (derivedAddress.toLowerCase() !== profile.blockchain_address.toLowerCase()) {
+            throw new Error('Hardhat token does not match your assigned address.');
+        }
+
+        // 4. Update profile to mark first_login_complete and store hardhat_key
+        const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ first_login_complete: true, hardhat_key: validatedKey })
+            .eq('id', userId);
+
+        if (updateError) throw new Error('Failed to update login status.');
+
+        // Since the frontend needs to handle transactions, it should probably securely save the private key locally
+        res.json({
+            message: 'First login successful',
+            token: userToken,
+            role: profile.role,
+            address: derivedAddress,
+            hardhatKey: validatedKey
+        });
+
+    } catch (error) {
+        res.status(400).json({ error: error.message });
     }
-
-    if (derivedAddress.toLowerCase() !== profile.blockchain_address.toLowerCase()) {
-        throw new Error('Hardhat token does not match your assigned address.');
-    }
-
-    // 4. Update profile to mark first_login_complete and store hardhat_key
-    const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ first_login_complete: true, hardhat_key: validatedKey })
-        .eq('id', userId);
-        
-    if (updateError) throw new Error('Failed to update login status.');
-
-    // Since the frontend needs to handle transactions, it should probably securely save the private key locally
-    res.json({ 
-        message: 'First login successful', 
-        token: userToken, 
-        role: profile.role,
-        address: derivedAddress,
-        hardhatKey: validatedKey
-    });
-
-  } catch(error) {
-      res.status(400).json({ error: error.message });
-  }
 });
 
 // Regular Login Helper to check if they completed first login
@@ -395,12 +395,12 @@ app.post('/api/auth/login', async (req, res) => {
             throw new Error('Please complete your first-time login using your hardhat free token.');
         }
 
-        res.json({ 
-            token: authData.session.access_token, 
+        res.json({
+            token: authData.session.access_token,
             role: profile ? profile.role : 'user',
             hardhatKey: profile ? profile.hardhat_key : null
         });
-    } catch(error) {
+    } catch (error) {
         res.status(400).json({ error: error.message });
     }
 });
@@ -431,7 +431,7 @@ app.post('/api/issue', upload.single('document'), async (req, res) => {
         let validatedKey;
         try {
             validatedKey = sanitizeAndValidatePrivateKey(finalHardhatKey);
-        } catch(e) {
+        } catch (e) {
             return res.status(400).json({ error: e.message });
         }
 
@@ -481,7 +481,7 @@ app.post('/api/issue', upload.single('document'), async (req, res) => {
         const recipientEmail = credentialText.trim().toLowerCase();
         const mailOptions = {
             from: `"EduDocs Document Service" <${process.env.SMTP_USER || 'no-reply@edudocs.test'}>`,
-            replyTo: user.email, 
+            replyTo: user.email,
             to: recipientEmail, // Recipient email
             cc: user.email, // Also send a copy to the issuer for their records
             subject: `[EduDocs] New Document Issued to ${recipientEmail}`,
@@ -515,7 +515,7 @@ app.post('/api/issue', upload.single('document'), async (req, res) => {
                     {
                         folder: "edudocs",
                         resource_type: "image", // PDFs are delivered via the image pipeline in Cloudinary!
-                        public_id: credentialId.slice(0,10) + '_' + Date.now()
+                        public_id: credentialId.slice(0, 10) + '_' + Date.now()
                     },
                     (error, result) => {
                         if (result) {
@@ -579,7 +579,7 @@ app.post('/api/revoke', async (req, res) => {
         let validatedKey;
         try {
             validatedKey = sanitizeAndValidatePrivateKey(finalHardhatKey);
-        } catch(e) {
+        } catch (e) {
             return res.status(400).json({ error: e.message });
         }
 
@@ -665,7 +665,7 @@ app.post('/api/verify', upload.single('document'), async (req, res) => {
     try {
         const hash = crypto.createHash('sha256').update(documentFile.buffer).digest('hex');
         const computedHash = "0x" + hash;
-        
+
         // Use exact same logic to compute credentialId (email + docHash)
         const credentialId = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(credentialText + computedHash));
 
@@ -686,8 +686,8 @@ app.post('/api/verify', upload.single('document'), async (req, res) => {
             return res.json({ verified: false, message: 'Cryptographic hash mismatch! This file was tampered with.' });
         }
 
-        res.json({ 
-            verified: true, 
+        res.json({
+            verified: true,
             message: 'Document is 100% authentic and unaltered.',
             issuer: cert.issuer,
             issuedAt: new Date(cert.issuedAt.toNumber() * 1000).toLocaleString()
@@ -829,15 +829,15 @@ app.post('/api/organizations', async (req, res) => {
     try {
         const { data: { user }, error: verifyError } = await supabase.auth.getUser(token);
         if (verifyError || !user) throw new Error('Invalid token');
-        
+
         const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
         if (!profile || profile.role !== 'super_admin') throw new Error('Forbidden: Super Admin only');
 
         const { data, error } = await supabase.from('organizations').insert([{ name }]).select();
         if (error) throw new Error(error.message);
-        
+
         res.json({ message: 'Organization created successfully', organization: data[0] });
-    } catch(err) {
+    } catch (err) {
         res.status(400).json({ error: err.message });
     }
 });
@@ -847,15 +847,15 @@ app.get('/api/organizations', async (req, res) => {
     try {
         const { data: { user }, error: verifyError } = await supabase.auth.getUser(token);
         if (verifyError || !user) throw new Error('Invalid token');
-        
+
         const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
         if (!profile || profile.role !== 'super_admin') throw new Error('Forbidden: Super Admin only');
 
         const { data, error } = await supabase.from('organizations').select('*');
         if (error) throw new Error(error.message);
-        
+
         res.json({ organizations: data || [] });
-    } catch(err) {
+    } catch (err) {
         res.status(400).json({ error: err.message });
     }
 });
@@ -864,10 +864,10 @@ app.post('/api/auth/create_master_admin', async (req, res) => {
     const { token, email, password, organization_id } = req.body;
     try {
         if (!organization_id) throw new Error('Organization ID is required to create a Master Admin.');
-        
+
         const { data: { user: adminUser }, error: verifyError } = await supabase.auth.getUser(token);
         if (verifyError || !adminUser) throw new Error('Invalid token');
-        
+
         const { data: profile } = await supabase.from('profiles').select('role').eq('id', adminUser.id).single();
         if (!profile || profile.role !== 'super_admin') throw new Error('Forbidden: Super Admin only');
 
@@ -877,7 +877,7 @@ app.post('/api/auth/create_master_admin', async (req, res) => {
         if (createError) throw new Error(createError.message);
 
         const { error: profileError } = await supabase.from('profiles').insert([
-          { id: newUser.user.id, role: 'master_admin', first_login_complete: true, organization_id }
+            { id: newUser.user.id, role: 'master_admin', first_login_complete: true, organization_id }
         ]);
         if (profileError) throw new Error(profileError.message);
 
@@ -892,18 +892,18 @@ app.get('/api/analytics/system', async (req, res) => {
     try {
         const { data: { user }, error: verifyError } = await supabase.auth.getUser(token);
         if (verifyError || !user) throw new Error('Invalid token');
-        
+
         const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
         if (!profile || profile.role !== 'super_admin') throw new Error('Forbidden: Super Admin only');
 
         const { data: orgs } = await supabase.from('organizations').select('*');
         const { data: profilesData } = await supabase.from('profiles').select('*');
         const { data: authUsers } = await supabase.auth.admin.listUsers();
-        
+
         const masterAdmins = profilesData ? profilesData.filter(p => p.role === 'master_admin').length : 0;
         const issuers = profilesData ? profilesData.filter(p => p.role === 'issuer').length : 0;
         const normalUsers = profilesData ? profilesData.filter(p => p.role === 'user').length : 0;
-        
+
         const allDocs = JSON.parse(fs.readFileSync(dbPath));
         const totalDocs = allDocs.length;
 
@@ -937,7 +937,7 @@ app.get('/api/analytics/system', async (req, res) => {
                 });
             }
         }
-        
+
         res.json({
             stats: {
                 totalOrganizations: orgs ? orgs.length : 0,
@@ -948,7 +948,7 @@ app.get('/api/analytics/system', async (req, res) => {
                 organizationsBreakdown: orgsBreakdown
             }
         });
-    } catch(err) {
+    } catch (err) {
         res.status(400).json({ error: err.message });
     }
 });
@@ -959,7 +959,7 @@ app.get('/api/analytics/organization/:id', async (req, res) => {
     try {
         const { data: { user }, error: verifyError } = await supabase.auth.getUser(token);
         if (verifyError || !user) throw new Error('Invalid token');
-        
+
         const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
         if (!profile || profile.role !== 'super_admin') throw new Error('Forbidden: Super Admin only');
 
@@ -990,7 +990,7 @@ app.get('/api/analytics/organization/:id', async (req, res) => {
             const dateObj = new Date();
             dateObj.setDate(dateObj.getDate() - i);
             const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-            
+
             const count = orgDocsArray.filter(d => {
                 if (!d.issuedAt) return false;
                 const docDate = new Date(d.issuedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -1009,7 +1009,7 @@ app.get('/api/analytics/organization/:id', async (req, res) => {
                 activityTrend: trend
             }
         });
-    } catch(err) {
+    } catch (err) {
         res.status(400).json({ error: err.message });
     }
 });
@@ -1087,7 +1087,7 @@ app.put('/api/profile/hardhat-key', async (req, res) => {
             validatedKey = sanitizeAndValidatePrivateKey(hardhatKey);
             const wallet = new ethers.Wallet(validatedKey);
             derivedAddress = wallet.address;
-        } catch(e) {
+        } catch (e) {
             throw new Error(e.message || 'Invalid hardhat token format.');
         }
 
@@ -1104,7 +1104,7 @@ app.put('/api/profile/hardhat-key', async (req, res) => {
         if (updateError) throw new Error('Failed to save hardhat key.');
 
         res.json({ success: true, message: 'Hardhat key successfully linked to your profile!' });
-    } catch(err) {
+    } catch (err) {
         res.status(400).json({ error: err.message });
     }
 });
@@ -1131,7 +1131,7 @@ app.post('/api/auth/session', async (req, res) => {
             role: profile.role,
             hardhatKey: profile.hardhat_key
         });
-    } catch(err) {
+    } catch (err) {
         res.status(401).json({ error: err.message });
     }
 });
