@@ -173,7 +173,7 @@ app.post('/api/auth/create_user', async (req, res) => {
             from: `"EduDocs Admin" <${process.env.SMTP_USER || 'no-reply@edudocs.test'}>`,
             to: email,
             subject: 'Your EduDocs Account Credentials',
-            text: `Welcome! Here are your login details:\n\nEmail: ${email}\nPassword: ${password}\nHasdnet Free Token (Private Key): ${hardhat_key}\n\nYou will need all three to login the first time. Keep your private key safe!`,
+            text: `Welcome! Here are your login details:\n\nEmail: ${email}\nPassword: ${password}\nHardhat Free Token (Private Key): ${hardhat_key}\n\nYou will need all three to login the first time. Keep your private key safe!`,
         };
 
         try {
@@ -283,7 +283,7 @@ app.post('/api/auth/bulk_create_users', async (req, res) => {
                     from: `"EduDocs Admin" <${process.env.SMTP_USER || 'no-reply@edudocs.test'}>`,
                     to: email,
                     subject: 'Your EduDocs Account Credentials Ready',
-                    text: `Welcome! An administrator has created an account for you on the EduDocs Platform.\n\nHere are your first-time login credentials:\n\nEmail: ${email}\nPassword: ${password}\nHasdnet Free Token (Private Key): ${hardhat_key}\n\nYou will need all three to login the first time. Keep your private key safe!`,
+                    text: `Welcome! An administrator has created an account for you on the EduDocs Platform.\n\nHere are your first-time login credentials:\n\nEmail: ${email}\nPassword: ${password}\nHardhat Free Token (Private Key): ${hardhat_key}\n\nYou will need all three to login the first time. Keep your private key safe!`,
                 };
 
                 try {

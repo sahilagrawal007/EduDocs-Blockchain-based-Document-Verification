@@ -423,7 +423,7 @@ export default function SuperAdminDashboard({ token, handleLogout, showModal }) 
                                             className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all outline-none"
                                         />
                                     </div>
-                                    <BtnPrimary className="w-full justify-center">Create Organization</BtnPrimary>
+                                    <BtnPrimary type="submit" className="w-full justify-center">Create Organization</BtnPrimary>
                                 </form>
                             </Card>
                             
@@ -587,7 +587,7 @@ export default function SuperAdminDashboard({ token, handleLogout, showModal }) 
                                             className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all outline-none"
                                         />
                                     </div>
-                                    <BtnPrimary className="w-full justify-center">Provision Account</BtnPrimary>
+                                    <BtnPrimary type="submit" className="w-full justify-center">Provision Account</BtnPrimary>
                                 </form>
                             </Card>
 
