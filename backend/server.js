@@ -74,6 +74,106 @@ if (process.env.SMTP_USER && process.env.SMTP_PASS) {
     })();
 }
 
+function generateEmailHtml(title, intro, details, cta) {
+    let detailsHtml = '';
+    if (details && details.length > 0) {
+        detailsHtml = `
+            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 24px; text-align: left;">
+        `;
+        
+        details.forEach((detail, index) => {
+            const isLast = index === details.length - 1;
+            const borderStyle = isLast ? '' : 'border-bottom: 1px solid #e2e8f0; padding-bottom: 16px; margin-bottom: 16px;';
+            const valueStyle = detail.isCode 
+                ? `font-family: SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace; font-size: 13px; background-color: #f1f5f9; padding: 10px 12px; border-radius: 8px; color: #4f46e5; border: 1px solid #e2e8f0; word-break: break-all; word-wrap: break-word; display: block; white-space: pre-wrap; line-height: 1.5; margin: 0;`
+                : `font-size: 15px; color: #0f172a; font-weight: 500; word-break: break-all; word-wrap: break-word; line-height: 1.5; display: block;`;
+                
+            detailsHtml += `
+                <div style="${borderStyle}">
+                    <div style="font-size: 11px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; line-height: 1.2;">${detail.label}</div>
+                    <div style="${valueStyle}">${detail.value}</div>
+                </div>
+            `;
+        });
+        
+        detailsHtml += `
+            </div>
+        `;
+    }
+    
+    let ctaHtml = '';
+    if (cta) {
+        ctaHtml = `
+            <div style="text-align: center; margin: 32px 0 24px 0;">
+                <a href="${cta.url}" target="_blank" style="background-color: #4f46e5; color: #ffffff; padding: 14px 28px; border-radius: 10px; font-size: 15px; font-weight: 600; text-decoration: none; display: inline-block; box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.2); transition: background-color 0.2s ease;">${cta.text}</a>
+            </div>
+        `;
+    }
+    
+    return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${title}</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;800&display=swap');
+    </style>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f8fafc; color: #0f172a; -webkit-font-smoothing: antialiased;">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; padding: 40px 10px;">
+        <tr>
+            <td align="center">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(15, 23, 42, 0.05); border: 1px solid #e2e8f0;">
+                    <!-- HEADER -->
+                    <tr>
+                        <td align="center" style="background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%); padding: 40px 20px; text-align: center;">
+                            <div style="background-color: rgba(255, 255, 255, 0.15); width: 50px; height: 50px; border-radius: 14px; display: inline-block; text-align: center; line-height: 50px; font-size: 24px; color: #ffffff; font-weight: bold; margin-bottom: 12px; font-family: 'Outfit', sans-serif;">ED</div>
+                            <h1 style="margin: 0; font-family: 'Outfit', -apple-system, sans-serif; font-size: 26px; font-weight: 800; color: #ffffff; letter-spacing: -0.03em;">EduDocs</h1>
+                            <p style="margin: 6px 0 0 0; font-size: 14px; color: #c7d2fe; font-weight: 500; letter-spacing: 0.02em;">Blockchain Document Verification</p>
+                        </td>
+                    </tr>
+                    <!-- CONTENT BODY -->
+                    <tr>
+                        <td style="padding: 40px 32px;">
+                            <h2 style="margin-top: 0; margin-bottom: 16px; font-family: 'Outfit', -apple-system, sans-serif; font-size: 22px; font-weight: 700; color: #0f172a; letter-spacing: -0.02em;">${title}</h2>
+                            <p style="margin-top: 0; margin-bottom: 28px; font-size: 15px; line-height: 1.6; color: #475569;">${intro}</p>
+                            
+                            <!-- DETAILS AREA -->
+                            ${detailsHtml}
+                            
+                            <!-- ACTION BUTTON -->
+                            ${ctaHtml}
+                            
+                            <hr style="border: 0; border-top: 1px solid #f1f5f9; margin: 32px 0 24px 0;" />
+                            
+                            <p style="margin-top: 0; margin-bottom: 0; font-size: 14px; line-height: 1.6; color: #475569;">
+                                Best regards,<br>
+                                <strong style="color: #0f172a;">EduDocs Platform Team</strong>
+                            </p>
+                        </td>
+                    </tr>
+                    <!-- FOOTER -->
+                    <tr>
+                        <td style="background-color: #f1f5f9; padding: 24px 32px; border-top: 1px solid #e2e8f0; text-align: center;">
+                            <p style="margin: 0; font-size: 12px; line-height: 1.6; color: #94a3b8;">
+                                This is a system-generated email from <strong>EduDocs</strong>. Please do not reply directly to this message.
+                            </p>
+                            <p style="margin: 12px 0 0 0; font-size: 12px; line-height: 1.6; color: #94a3b8; font-weight: 500;">
+                                &copy; 2026 EduDocs. Secured via cryptographic proof on the Ethereum Blockchain.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+    `;
+}
+
 // Config for automation
 let localConfig = { contractAddress: '' };
 try {
@@ -174,6 +274,16 @@ app.post('/api/auth/create_user', async (req, res) => {
             to: email,
             subject: 'Your EduDocs Account Credentials',
             text: `Welcome! Here are your login details:\n\nEmail: ${email}\nPassword: ${password}\nHardhat Free Token (Private Key): ${hardhat_key}\n\nYou will need all three to login the first time. Keep your private key safe!`,
+            html: generateEmailHtml(
+                'Your EduDocs Account Credentials',
+                `Welcome to EduDocs! An account has been created for you on the EduDocs Platform. Please use the temporary credentials below to complete your first-time login and link your blockchain account.`,
+                [
+                    { label: 'Portal Username', value: email },
+                    { label: 'Temporary Password', value: password, isCode: true },
+                    { label: 'Hardhat Token (Private Key)', value: hardhat_key, isCode: true }
+                ],
+                { text: 'Complete First Login', url: 'http://localhost:5173/login' }
+            )
         };
 
         try {
@@ -284,6 +394,16 @@ app.post('/api/auth/bulk_create_users', async (req, res) => {
                     to: email,
                     subject: 'Your EduDocs Account Credentials Ready',
                     text: `Welcome! An administrator has created an account for you on the EduDocs Platform.\n\nHere are your first-time login credentials:\n\nEmail: ${email}\nPassword: ${password}\nHardhat Free Token (Private Key): ${hardhat_key}\n\nYou will need all three to login the first time. Keep your private key safe!`,
+                    html: generateEmailHtml(
+                        'Your EduDocs Account Credentials Ready',
+                        `Welcome! An administrator has provisioned an account for you on the EduDocs Platform. Please use the temporary credentials below to complete your first-time login and link your blockchain account.`,
+                        [
+                            { label: 'Portal Username', value: email },
+                            { label: 'Temporary Password', value: password, isCode: true },
+                            { label: 'Hardhat Token (Private Key)', value: hardhat_key, isCode: true }
+                        ],
+                        { text: 'Complete First Login', url: 'http://localhost:5173/login' }
+                    )
                 };
 
                 try {
@@ -486,6 +606,18 @@ app.post('/api/issue', upload.single('document'), async (req, res) => {
             cc: user.email, // Also send a copy to the issuer for their records
             subject: `[EduDocs] New Document Issued to ${recipientEmail}`,
             text: `Hello,\n\nA new document has been issued to you by ${user.email}.\n\nTransaction Hash: ${tx.hash}\nCredential ID: ${credentialId}\nDocument Hash: ${bytes32Hash}\n\nPlease find the document attached for your records.`,
+            html: generateEmailHtml(
+                'New Cryptographic Document Issued',
+                `A new official document has been successfully issued to you on the secure EduDocs Blockchain Ledger by <strong>${user.email}</strong>. The verification record is now immutably minted.`,
+                [
+                    { label: 'Issuer Email', value: user.email },
+                    { label: 'Recipient Email', value: recipientEmail },
+                    { label: 'Transaction Hash', value: tx.hash, isCode: true },
+                    { label: 'Credential ID', value: credentialId, isCode: true },
+                    { label: 'Document Hash', value: bytes32Hash, isCode: true }
+                ],
+                { text: 'Verify on Portal', url: 'http://localhost:5173' }
+            ),
             attachments: [
                 {
                     filename: documentFile.originalname || 'issued_document.pdf',
@@ -802,10 +934,19 @@ app.put('/api/users/:id/password', async (req, res) => {
 
         if (userEmail && transporter) {
             const mailOptions = {
-                from: `"EduDocs Security" <${process.env.SMTP_USER}>`,
+                from: `"EduDocs Security" <${process.env.SMTP_USER || 'no-reply@edudocs.test'}>`,
                 to: userEmail,
                 subject: 'Security Alert: Password Updated',
                 text: `Hello,\n\nYour password for EduDocs has been updated by an administrator.\n\nYour new password is: ${newPassword}\n\nPlease login and change it if necessary.`,
+                html: generateEmailHtml(
+                    'Security Alert: Password Updated',
+                    `This is an official security notification that your password for the EduDocs secure platform has been successfully updated by an administrator. Please log in using your new password.`,
+                    [
+                        { label: 'Account Email', value: userEmail },
+                        { label: 'New Temporary Password', value: newPassword, isCode: true }
+                    ],
+                    { text: 'Login to Portal', url: 'http://localhost:5173/login' }
+                )
             };
             try {
                 await transporter.sendMail(mailOptions);

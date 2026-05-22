@@ -1,7 +1,10 @@
 import React from 'react';
-import { Shield, Mail, Lock, Key, Loader2 } from 'lucide-react';
+import { Shield, Mail, Lock, Key, Loader2, Eye, EyeOff } from 'lucide-react';
 
 const Login = ({ email, setEmail, password, setPassword, isFirstLogin, setIsFirstLogin, hardhatKey, setHardhatKey, handleLogin, isLoggingIn }) => {
+  const [showPassword, setShowPassword] = React.useState(false);
+  const [showHardhatKey, setShowHardhatKey] = React.useState(false);
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-10"
          style={{ background: 'radial-gradient(circle at 50% 0%, #f8fafc 0%, #cbd5e1 100%)' }}>
@@ -47,14 +50,23 @@ const Login = ({ email, setEmail, password, setPassword, isFirstLogin, setIsFirs
             <div className="relative flex items-center">
               <Lock size={16} className="absolute left-4 text-slate-400 pointer-events-none" />
               <input
-                type="password" placeholder="••••••••"
+                type={showPassword ? "text" : "password"} placeholder="••••••••"
                 value={password} onChange={e => setPassword(e.target.value)}
                 required disabled={isLoggingIn}
-                className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 bg-slate-50
+                className="w-full pl-11 pr-11 py-3 rounded-xl border border-slate-200 bg-slate-50
                            text-slate-900 text-sm font-medium placeholder:text-slate-400
                            focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500
                            disabled:opacity-50 transition"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                disabled={isLoggingIn}
+                className="absolute right-4 text-slate-400 hover:text-slate-600 focus:outline-none disabled:opacity-50 transition-colors"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
             </div>
           </div>
 
@@ -76,14 +88,23 @@ const Login = ({ email, setEmail, password, setPassword, isFirstLogin, setIsFirs
               <div className="relative flex items-center">
                 <Key size={16} className="absolute left-4 text-slate-400 pointer-events-none" />
                 <input
-                  type="password" placeholder="0x..."
+                  type={showHardhatKey ? "text" : "password"} placeholder="0x..."
                   value={hardhatKey} onChange={e => setHardhatKey(e.target.value)}
                   required disabled={isLoggingIn}
-                  className="w-full pl-11 pr-4 py-3 rounded-xl border border-amber-300 bg-amber-50
+                  className="w-full pl-11 pr-11 py-3 rounded-xl border border-amber-300 bg-amber-50
                              text-slate-900 text-sm font-medium placeholder:text-slate-400
                              focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400
                              disabled:opacity-50 transition"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowHardhatKey(!showHardhatKey)}
+                  disabled={isLoggingIn}
+                  className="absolute right-4 text-slate-400 hover:text-slate-600 focus:outline-none disabled:opacity-50 transition-colors"
+                  aria-label={showHardhatKey ? "Hide key" : "Show key"}
+                >
+                  {showHardhatKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
               </div>
               <p className="text-xs text-slate-400 mt-1">Required once for cryptographic signing authority setup.</p>
             </div>

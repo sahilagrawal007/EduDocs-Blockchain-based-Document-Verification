@@ -77,7 +77,9 @@ const UserDashboard = ({
                   <Td><CredBadge id={doc.credentialId} /></Td>
                   <Td>{new Date(doc.issuedAt).toLocaleDateString()}</Td>
                   <Td center>
-                    {doc.documentUrl ? (
+                    {doc.revoked ? (
+                      <Badge variant="danger">Revoked</Badge>
+                    ) : doc.documentUrl ? (
                       <div className="flex items-center justify-center gap-2">
                         <LinkAction href={doc.documentUrl}><ExternalLink size={11} />Preview</LinkAction>
                         <LinkAction href={doc.documentUrl.replace('/upload/', '/upload/fl_attachment/')} download>
@@ -89,9 +91,15 @@ const UserDashboard = ({
                     )}
                   </Td>
                   <Td center>
-                    <BtnProof onClick={() => showModal
-                      ? showModal('Ledger Proof', 'TX Hash: ' + doc.txHash)
-                      : alert('TX Hash: ' + doc.txHash)}
+                    <BtnProof onClick={() => {
+                      const statusText = doc.revoked ? '🔴 Revoked' : '🟢 Active';
+                      const message = `Credential ID:\n${doc.credentialId}\n\nStatus:\n${statusText}\n\nTransaction Hash:\n${doc.txHash}`;
+                      if (showModal) {
+                        showModal('Ledger Proof', message);
+                      } else {
+                        alert(message);
+                      }
+                    }}
                     />
                   </Td>
                 </tr>
