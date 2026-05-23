@@ -10,6 +10,7 @@ import IssuerDashboard from './components/IssuerDashboard';
 import UserDashboard from './components/UserDashboard';
 import Profile from './components/Profile';
 import SuperAdminDashboard from './components/SuperAdminDashboard';
+import PublicVerify from './components/PublicVerify';
 
 function App() {
   const navigate = useNavigate();
@@ -434,6 +435,8 @@ function App() {
             />
           )
         } />
+
+        <Route path="/verify-public" element={<PublicVerify showModal={showModal} />} />
 
         <Route path="/super-admin" element={
           role === 'super_admin' ? (

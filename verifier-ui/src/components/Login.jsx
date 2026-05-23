@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Shield, Mail, Lock, Key, Loader2, Eye, EyeOff } from 'lucide-react';
 
 const Login = ({ email, setEmail, password, setPassword, isFirstLogin, setIsFirstLogin, hardhatKey, setHardhatKey, handleLogin, isLoggingIn }) => {
@@ -127,6 +128,22 @@ const Login = ({ email, setEmail, password, setPassword, isFirstLogin, setIsFirs
             )}
           </button>
         </form>
+
+        <div className="relative flex py-4 items-center">
+          <div className="flex-grow border-t border-slate-200"></div>
+          <span className="flex-shrink mx-4 text-slate-400 text-xs font-semibold uppercase tracking-wider">Or</span>
+          <div className="flex-grow border-t border-slate-200"></div>
+        </div>
+
+        <Link
+          to="/verify-public"
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl
+                     border border-indigo-600 bg-transparent text-indigo-600 hover:bg-indigo-50/50 
+                     text-sm font-semibold transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0"
+        >
+          <Shield size={16} />
+          <span>Verify Document Without Login</span>
+        </Link>
       </div>
 
       {/* Footer */}

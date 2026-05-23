@@ -787,11 +787,12 @@ app.get('/api/issued-documents', async (req, res) => {
 
 // Endpoint for issuers (or anyone) to verify a document
 app.post('/api/verify', upload.single('document'), async (req, res) => {
-    const { credentialText, contractAddress } = req.body;
+    const { credentialText } = req.body;
+    const contractAddress = req.body.contractAddress || CONTRACT_ADDRESS;
     const documentFile = req.file;
 
     if (!credentialText || !contractAddress || !documentFile) {
-        return res.status(400).json({ error: 'Missing parameters. Need credentialText, document, contractAddress.' });
+        return res.status(400).json({ error: 'Missing parameters. Need credentialText, document.' });
     }
 
     try {
