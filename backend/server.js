@@ -1044,7 +1044,7 @@ app.get('/api/analytics/system', async (req, res) => {
 
         const masterAdmins = profilesData ? profilesData.filter(p => p.role === 'master_admin').length : 0;
         const issuers = profilesData ? profilesData.filter(p => p.role === 'issuer').length : 0;
-        const normalUsers = profilesData ? profilesData.filter(p => p.role === 'user').length : 0;
+        const normalUsers = profilesData ? profilesData.filter(p => p.role === 'user' || p.role === 'normal_user').length : 0;
 
         const allDocs = JSON.parse(fs.readFileSync(dbPath));
         const totalDocs = allDocs.length;
@@ -1056,7 +1056,7 @@ app.get('/api/analytics/system', async (req, res) => {
                 const orgProfiles = profilesData.filter(p => p.organization_id === org.id);
                 const orgMasterAdmins = orgProfiles.filter(p => p.role === 'master_admin').length;
                 const orgIssuers = orgProfiles.filter(p => p.role === 'issuer').length;
-                const orgNormalUsers = orgProfiles.filter(p => p.role === 'user').length;
+                const orgNormalUsers = orgProfiles.filter(p => p.role === 'user' || p.role === 'normal_user').length;
 
                 // Find issuer emails in this org
                 const orgIssuerEmails = authUsers ? authUsers.users
@@ -1112,7 +1112,7 @@ app.get('/api/analytics/organization/:id', async (req, res) => {
         const orgProfiles = profilesData ? profilesData.filter(p => p.organization_id === orgId) : [];
         const masterAdmins = orgProfiles.filter(p => p.role === 'master_admin').length;
         const issuers = orgProfiles.filter(p => p.role === 'issuer').length;
-        const normalUsers = orgProfiles.filter(p => p.role === 'user').length;
+        const normalUsers = orgProfiles.filter(p => p.role === 'user' || p.role === 'normal_user').length;
 
         // Map issuer emails in this org
         const orgIssuerEmails = authUsers ? authUsers.users
